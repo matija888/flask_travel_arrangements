@@ -1,0 +1,134 @@
+body {
+    padding-top: 5rem;
+}
+.navbar {
+    padding-bottom: 0;
+}
+
+.navbar-custom {
+    border-bottom-color: red !important;
+}
+
+.modal-body li span:first-of-type {
+    font-weight: bold;
+}
+
+.dropdown-menu {
+    font-size: 1em;
+    width: 275px;
+}
+
+.dropdown-submenu {
+    position:relative;
+}
+.dropdown-submenu>.dropdown-menu {
+    top:0;
+    left:100%;
+    margin-top:-6px;
+    margin-left:-1px;
+    -webkit-border-radius:0 6px 6px 6px;
+    -moz-border-radius:0 6px 6px 6px;
+    border-radius:0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+    display:block;
+}
+.dropdown-submenu>a:after {
+    display:block;
+    content:" ";
+    float:right;
+    width:0;
+    height:0;
+    border-color:transparent;
+    border-style:solid;
+    border-width:5px 0 5px 5px;
+    border-left-color:#cccccc;
+    margin-top:5px;
+    margin-right:-10px;
+}
+.dropdown-submenu:hover>a:after {
+    border-left-color:#ffffff;
+}
+.dropdown-submenu.pull-left {
+    float:none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+    left:-100%;
+    margin-left:10px;
+    -webkit-border-radius:6px 0 6px 6px;
+    -moz-border-radius:6px 0 6px 6px;
+    border-radius:6px 0 6px 6px;
+}
+
+nav {
+    background-color: #343a40;
+    position: relative;
+    padding: 4px 0 0 180px;
+    z-index: 1;
+}
+
+nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+nav > a {
+    padding: 0 !important;
+}
+
+nav ul::after {
+    content: '';
+    display: block;
+    clear: both;
+}
+
+nav ul li:hover {
+    background-color: rgba(0,102,102,1);
+    color: #fff;
+}
+
+nav ul li:hover > ul {
+    display: block;
+}
+
+nav ul li a {
+    display: inline-block;
+    color: rgba(255,255,255,1);
+    padding: 10px 20px;
+    text-decoration: none;
+    width: 220px;
+}
+
+nav ul li a:hover {
+    background-color: #339999;
+    color: #fff;
+    text-decoration: none;
+}
+
+nav ul ul {
+    display: none;
+    position: absolute;
+    top: 100%;
+    background-color: rgba(0,102,102,1);
+}
+nav ul ul li {
+    position: relative;
+}
+
+nav ul ul ul {
+    left:100%;
+    top: 0;
+}
+
+/* top level */
+nav > ul {
+    /*padding-left: 35px;*/
+}
+nav > ul > li, nav > a {
+    float: left;
+}
+nav > ul > li > a {
+    /*padding: 10px 20px 15px 20px;*/
+    width: auto;
+}
