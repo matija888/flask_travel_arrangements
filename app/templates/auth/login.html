@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+        <meta charset="utf-8">
+        <meta name="description" content="">
+        <meta name="author" content="Matija Lukic">
+        <title>{% block title %}{% endblock %}</title>
+
+        {% block stylesheets %}
+            <link href="{{ url_for('static', filename='css/bootstrap.css') }}" rel="stylesheet">
+            <link href="{{ url_for('static', filename='css/base.css') }}" rel="stylesheet">
+            <link href="{{ url_for('static', filename='css/auth/login.css') }}" rel="stylesheet">
+        {% endblock %}
+    {% endblock %}
+</head>
+
+<body>
+
+    <div class="container">
+        <form method="POST" enctype="multipart/form-data" class="row">
+
+            <div class="offset-3 col-6">
+
+                <div class="row mb-2">
+                    <div class="offset-3 col-6">
+                        <h2>Please login</h2>
+                        <hr>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        First name:
+                    </div>
+                    <div class="col-8">
+                        <input type="text" name="first_name" class="form-control" placeholder="First name">
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        Last name:
+                    </div>
+                    <div class="col-8">
+                        <input type="text" name="last_name" class="form-control" placeholder="Last name">
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        Email:
+                    </div>
+                    <div class="col-8">
+                        <input type="email" name="email" class="form-control" placeholder="Email">
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        Username:
+                    </div>
+                    <div class="col-8">
+                        <input type="text" name="username" class="form-control" placeholder="Username">
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        Password:
+                    </div>
+                    <div class="col-8">
+                        <input type="password" name="password" class="form-control" placeholder="Password">
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        Retype Password:
+                    </div>
+                    <div class="col-8">
+                        <input type="password" name="confirm_password" class="form-control" placeholder="Retype Password">
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="offset-9 col-3 text-right">
+                        <input type="submit" class="btn btn-success" value="Login">
+                    </div>
+                </div>
+
+            </div>
+
+        </form>
+    </div>
+
+</body>

@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 
+## [0.3.0] - 2021-09-30
+### Added
+- Added tests folder for testing app - 100% tested (Flask-Testing and coverage)
+- Added first version of database using alembic and Flask-Migrate  
+- Create auth blueprint for authentication via login page
+- Hardcoded connection to the Postgresql database - to be changed to set it up when start app
+- Added model for User
+- Bootstrap, JQuery
+### Changed
+### Fixed
+
 ## [0.2.0] - 2021-09-29
 ### Added
 - The app is created using create_app func when we start flask app with app.py script

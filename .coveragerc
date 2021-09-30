@@ -1,0 +1,6 @@
+[run]
+parallel=True
+source=
+    app
+omit=
+    venv
