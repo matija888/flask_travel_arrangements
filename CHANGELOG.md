@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 
+## [0.4.0] - 2021-10-02
+### Added
+- Added authentication system
+    - User login/logout using Flask-Login
+    - User registering
+### Changed
+### Fixed
+
 ## [0.3.0] - 2021-09-30
 ### Added
 - Added tests folder for testing app - 100% tested (Flask-Testing and coverage)

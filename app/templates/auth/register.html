@@ -41,8 +41,41 @@
 
                 <div class="row mb-2">
                     <div class="offset-1 col-10">
-                        <h2>Please login</h2>
+                        <h2>Please register a new account</h2>
                         <hr>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        First name:
+                    </div>
+                    <div class="col-8">
+                        <input type="text" name="first_name" class="form-control" placeholder="First name"
+                               value="{% if form %}{{ form['first_name'] }}{% endif %}"
+                        >
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        Last name:
+                    </div>
+                    <div class="col-8">
+                        <input type="text" name="last_name" class="form-control" placeholder="Last name"
+                        value="{% if form %}{{ form['last_name'] }}{% endif %}"
+                        >
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        Email:
+                    </div>
+                    <div class="col-8">
+                        <input type="email" name="email" class="form-control" placeholder="Email"
+                        value="{% if form %}{{ form['email'] }}{% endif %}"
+                        >
                     </div>
                 </div>
 
@@ -51,7 +84,9 @@
                         Username:
                     </div>
                     <div class="col-8">
-                        <input type="text" name="username" class="form-control" placeholder="Username">
+                        <input type="text" name="username" class="form-control" placeholder="Username"
+                        value="{% if form %}{{ form['username'] }}{% endif %}"
+                        >
                     </div>
                 </div>
 
@@ -60,13 +95,20 @@
                         Password:
                     </div>
                     <div class="col-8">
-                        <input type="password" name="password" class="form-control" placeholder="Password">
+                        <input type="password" name="password" class="form-control" placeholder="Password"
+                        value="{% if form %}{{ form['password'] }}{% endif %}"
+                        >
                     </div>
                 </div>
 
                 <div class="row mb-2">
-                    <div class="col-12 text-right">
-                        If you do not have account, please register <a href="{{ url_for('auth.register') }}">here</a>.
+                    <div class="col-4 text-right">
+                        Retype Password:
+                    </div>
+                    <div class="col-8">
+                        <input type="password" name="confirm_password" class="form-control"
+                               placeholder="Retype Password" value="{% if form %}{{ form['confirm_password'] }}{% endif %}"
+                        >
                     </div>
                 </div>
 

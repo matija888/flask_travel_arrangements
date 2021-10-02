@@ -6,5 +6,22 @@
 {% endblock %}
 
 {% block content %}
-    This is content of the home page.
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'error' %}
+                    <div class="alert alert-danger">
+                        {{ message|safe }}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        {{ message|safe }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    Welcome {{ current_user.username }}
 {% endblock %}
