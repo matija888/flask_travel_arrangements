@@ -1,11 +1,12 @@
 import os
 import unittest
+from datetime import date
 
 from flask_testing import TestCase
 from flask_login import LoginManager
 
 from app import create_app, db
-from app.models import User
+from app.models import User, Arrangement
 
 # Creates a new instance of the Flask application. The reason for this
 # is that we can't interrupt the application instance that is currently
@@ -173,6 +174,23 @@ class TestApp(TestCase):
     def test_admin_panel_get_request(self):
         response = self.client.get('/admin_panel')
         self.assertEqual(response.status_code, 200)
+
+    def test_travel_arrangements(self):
+        response = self.client.get('/arrangements')
+        self.assertEqual(response.status_code, 200)
+
+    def test_insert_new_travel_arrangements(self):
+        response = self.client.post('/arrangements', data=dict(
+            destination='Spain', start_date='2021-11-01', end_date='2021-11-10', description='Autumn in Spain.',
+            number_of_persons=2, price=580.00
+        ))
+        self.assertEqual(response.status_code, 200)
+        arrangement = Arrangement.query.filter_by(description='Autumn in Spain.').first()
+        self.assertEqual(arrangement.id, 1)
+        self.assertEqual(arrangement.start_date, date(2021, 11, 1))
+        self.assertEqual(arrangement.end_date, date(2021, 11, 10))
+        self.assertEqual(arrangement.number_of_persons, 2)
+        self.assertEqual(arrangement.price, 580.00)
 
 
 if __name__ == '__main__':

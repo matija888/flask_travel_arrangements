@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Travel Arrangements{% endblock %}
+
+{% block stylesheets %}
+    {{ super() }}
+    <link href="{{ url_for('static', filename='css/bootstrap-datepicker3.min.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'error' %}
+                    <div class="alert alert-danger">
+                        {{ message|safe }}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        {{ message|safe }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <h1>Travel arrangements:</h1>
+    <hr>
+
+    {% if current_user.account_type == 'ADMIN' %}
+    <h2>Insert new travel arrangements</h2>
+    <form method="POST" class="container" action="{{ url_for('main.arrangements') }}">
+
+        <div class="row mb-2">
+            <div class="col-3">Destination:</div>
+            <div class="col-3">
+                <input type="text" name="destination" class="form-control">
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="col-3">Start date:</div>
+            <div class="col-3">
+                <input type="text" name="start_date" class="form-control input-date">
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="col-3">End date:</div>
+            <div class="col-3">
+                <input type="text" name="end_date" class="form-control input-date">
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="col-3">Description:</div>
+            <div class="col-3">
+                <input type="text" name="description" class="form-control">
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="col-3">Number of persons:</div>
+            <div class="col-3">
+                <input type="number" step="1" min="1" name="number_of_persons" class="form-control">
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="col-3">Price:</div>
+            <div class="col-3">
+                <input type="number" step="0.01" min="0" max="99999.99" name="price" class="form-control">
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            <div class="offset-3 col-3">
+                <input type="submit" name="submit" class="btn btn-success pull-right" value="Insert">
+            </div>
+        </div>
+
+    </form>
+    <hr>
+    {% endif %}
+
+    <h2>All travel arrangements</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Destination</th>
+                <th>Start date</th>
+                <th>End date</th>
+                <th>Description</th>
+                <th>Price</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for arrangement in arrangements %}
+            <tr>
+                <td>{{ arrangement.destination }}</td>
+                <td>{{ arrangement.start_date }}</td>
+                <td>{{ arrangement.end_date }}</td>
+                <td>{{ arrangement.description }}</td>
+                <td>{{ arrangement.price }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/bootstrap-datepicker.min.js') }}"></script>
+    <script>
+        $('.input-date').datepicker({
+            format: "dd.mm.yyyy",
+            weekStart: 1,
+            todayBtn: "linked",
+            clearBtn: true,
+            orientation: "bottom",
+            daysOfWeekHighlighted: "0,6",
+            autoclose: true,
+            todayHighlight: true
+        });
+    </script>
+{% endblock %}

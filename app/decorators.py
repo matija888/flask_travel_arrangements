@@ -14,7 +14,7 @@ def get_current_user_account_type():
         return redirect(url_for('auth.login'))
 
 
-def requires_account_type(*account_types):
+def requires_account_types(*account_types):
     def wrapper(f):
         @wraps(f)
         def wrapped(*args, **kwargs):

@@ -2,9 +2,9 @@ from flask import render_template, flash, request
 from flask_login import login_required
 
 from . import main
-from app.models import User
+from app.models import User, Arrangement
 from app import db
-from app.decorators import requires_account_type
+from app.decorators import requires_account_types
 
 
 @main.route('/')
@@ -15,14 +15,14 @@ def index():
 
 @main.route('/admin_panel')
 @login_required
-@requires_account_type('ADMIN')
+@requires_account_types('ADMIN')
 def admin_panel():
     return render_template('main/admin.html')
 
 
 @main.route('/manage_account_type_permission_request/<user_id>/<action>')
 @login_required
-@requires_account_type('ADMIN')
+@requires_account_types('ADMIN')
 def manage_account_type_permission_request(user_id, action):
     user = User.query.filter_by(id=user_id).first()
     if user:
@@ -58,3 +58,20 @@ def edit_user_data(user_id):
         db.session.commit()
         flash('You have just changed your profile data.')
     return render_template('main/edit_user_data.html', user=user)
+
+
+@main.route('/arrangements', methods=['GET', 'POST'])
+@login_required
+@requires_account_types('ADMIN', 'TRAVEL GUIDE')
+def arrangements():
+    form = request.form
+    if request.method == 'POST':
+        arrangement = Arrangement(
+            destination=form['destination'], start_date=form['start_date'], end_date=form['end_date'],
+            description=form['description'], number_of_persons=form['number_of_persons'], price=form['price']
+        )
+        db.session.add(arrangement)
+        db.session.commit()
+        flash('You have successfully inserted a new travel arrangement.')
+    arrangements = Arrangement.query.all()
+    return render_template('main/arrangements.html', arrangements=arrangements)

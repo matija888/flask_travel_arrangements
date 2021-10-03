@@ -33,6 +33,12 @@
         </li>
         {% endif %}
 
+        {% if current_user.account_type in ['ADMIN', 'TRAVEL GUIDE'] %}
+        <li class="nav-item">
+            <a href="{{ url_for('main.arrangements') }}">Arrangements</a>
+        </li>
+        {% endif %}
+
         <li class="nav-item">
             <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Log out</a>
         </li>

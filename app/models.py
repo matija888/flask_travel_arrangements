@@ -11,6 +11,7 @@ def get_user(user_id):
 
 
 class User(db.Model, UserMixin):
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
@@ -65,3 +66,14 @@ class User(db.Model, UserMixin):
                 'approve', 'reject'
             ]
         ]
+
+
+class Arrangement(db.Model):
+    __tablename__ = 'arrangement'
+    id = db.Column(db.Integer, primary_key=True)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    description = db.Column(db.String(500), nullable=False)
+    destination = db.Column(db.String(50), nullable=False)
+    number_of_persons = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Numeric(9, 2), nullable=False)
