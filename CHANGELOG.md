@@ -11,13 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 
+## [0.5.0] - 2021-10-03
+
+### Changed
+- Give option to the user to choose which account type they want to have
+
+### Added 
+- Add the admin page 
+- On the admin page, Admin can solve requests from the user related to account type
+- Added modals for two-step (pop-up windows) for approving/rejecting a request
+
+## [0.4.0] - 2021-10-02
+### Added
+- Added new column desired_account_type in user table
+
 ## [0.4.0] - 2021-10-02
 ### Added
 - Added authentication system
     - User login/logout using Flask-Login
     - User registering
-### Changed
-### Fixed
 
 ## [0.3.0] - 2021-09-30
 ### Added
@@ -27,8 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardcoded connection to the Postgresql database - to be changed to set it up when start app
 - Added model for User
 - Bootstrap, JQuery
-### Changed
-### Fixed
 
 ## [0.2.0] - 2021-09-29
 ### Added

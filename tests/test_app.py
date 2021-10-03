@@ -56,10 +56,16 @@ class TestApp(TestCase):
         self.assertTemplateUsed('auth/register.html')
         self.assertEqual(response.status_code, 200)
 
+    def test_register_user(self):
+        self.client.post('/auth/register', data=dict(
+            first_name='Test', last_name='User', username='test_user', email='test@novelic.com', password='testing111',
+            confirm_password='testing111', desired_account_type='ADMIN'
+        ))
+
     def test_register_user_with_incorrect_password_retyping(self):
         response = self.client.post('/auth/register', data=dict(
             first_name='Test', last_name='User', username='test_user', email='test@novelic.com', password='testing111',
-            confirm_password='testing11'
+            confirm_password='testing11', desired_account_type='ADMIN'
         ))
         self.assertEqual(response.status_code, 200)
         self.assertMessageFlashed(
@@ -67,13 +73,10 @@ class TestApp(TestCase):
         )
 
     def test_register_with_already_existing_username(self):
-        self.client.post('/auth/register', data=dict(
-            first_name='Test', last_name='User', username='test_user', email='test@novelic.com', password='testing111',
-            confirm_password='testing111'
-        ))
+        self.test_register_user()
         response = self.client.post('/auth/register', data=dict(
             first_name='Test', last_name='User', username='test_user', email='test@novelic.com', password='testing111',
-            confirm_password='testing111'
+            confirm_password='testing111', desired_account_type='TRAVEL GUIDE'
         ))
         self.assertEqual(response.status_code, 302)
         self.assertMessageFlashed(
@@ -83,8 +86,8 @@ class TestApp(TestCase):
     def test_login_page_post_recognized_user(self):
         # first register user in order to test auth with wrong password
         response = self.client.post('/auth/register', data=dict(
-            first_name='Test', last_name='User', username='test_user', email='test@novelic.com', password='testing123',
-            confirm_password='testing123'
+            first_name='Test', last_name='User', username='test_user', email='test@novelic.com', password='testing111',
+            confirm_password='testing111', desired_account_type='ADMIN'
         ))
         self.assertEqual(response.status_code, 302)
 
@@ -94,8 +97,7 @@ class TestApp(TestCase):
         self.assertMessageFlashed('Incorrect username or password!', 'error')
 
         # CORRECT PASSWORD
-        response = self.client.post('/auth/login', data=dict(username='test_user', password='testing123'))
-        self.assertEqual(response.status_code, 302)
+        response = self.client.post('/auth/login', data=dict(username='test_user', password='testing111'))
         self.assertMessageFlashed('You have successfully login. Welcome!')
 
     def test_logout(self):
@@ -108,7 +110,7 @@ class TestApp(TestCase):
 
         user = User(
             first_name='John', last_name='Doe', username='john11', password='pass',
-            email='john.doe@example.com', account_type='TOURIST'
+            email='john.doe@example.com', desired_account_type='TOURIST'
         )
         db.session.add(user)
         db.session.commit()
@@ -121,13 +123,34 @@ class TestApp(TestCase):
     def test_try_to_access_not_readable_attribute_password(self):
         user = User(
             first_name='Test', last_name='User', username='test_user', email='test@novelic.com', password='testing111',
-            account_type='TOURIST'
+            account_type='TOURIST', desired_account_type='ADMIN'
         )
         db.session.add(user)
         db.session.commit()
         user = User.query.first()
         with self.assertRaises(AttributeError):
             user.password
+
+    def test_approve_account_type_permission_request(self):
+        self.test_register_user()
+        response = self.client.get('/manage_account_type_permission_request/1/approve')
+        self.assertEqual(response.status_code, 200)
+        self.assertMessageFlashed(
+            'You have just approved request from Test User to give them ADMIN permissions.'
+        )
+
+    def test_reject_account_type_permission_request(self):
+        self.test_register_user()
+        response = self.client.get('/manage_account_type_permission_request/1/reject')
+        self.assertEqual(response.status_code, 200)
+        self.assertMessageFlashed(
+            'You have just rejected request from Test User to give them ADMIN permissions.'
+        )
+
+    def test_admin_login(self):
+        self.test_approve_account_type_permission_request()
+        self.test_login_page_post_recognized_user()
+
 
 
 if __name__ == '__main__':

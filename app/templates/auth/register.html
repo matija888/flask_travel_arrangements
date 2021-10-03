@@ -113,10 +113,26 @@
                 </div>
 
                 <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        Desired account type:
+                    </div>
+                    <div class="col-8">
+                        <select name="desired_account_type" class="form-control">
+                            {% for account_type in ['TOURIST', 'TRAVEL GUIDE', 'ADMIN'] %}
+                                <option value="{{ account_type }}"
+                                {% if form and form['desired_account_type'] == account_type %}
+                                    selected
+                                {% endif %}
+                                >{{ account_type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
                     <div class="offset-9 col-3 text-right">
                         <input type="submit" class="btn btn-success" value="Login">
                     </div>
-                </div>
                 </div>
 
             </div>

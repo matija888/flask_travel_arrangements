@@ -17,7 +17,7 @@ def register():
                 # insert a new user if password and confirmed password are equal
                 user = User(
                     first_name=form['first_name'], last_name=form['last_name'], username=form['username'],
-                    email=form['email'], password=form['password'], account_type='TOURIST'
+                    email=form['email'], password=form['password'], desired_account_type=form['desired_account_type']
                 )
                 db.session.add(user)
                 db.session.commit()
@@ -50,7 +50,11 @@ def login():
         elif user.verify_password(form['password']):
             login_user(user)
             flash('You have successfully login. Welcome!')
-            return redirect(url_for('main.index'))
+            if user.account_type == 'ADMIN':
+                users_pending_requests = User.get_pending_account_type_requests()
+                return render_template('main/admin.html', users_pending_requests=users_pending_requests)
+            else:
+                return redirect(url_for('main.index'))
         else:
             flash('Incorrect username or password!', 'error')
             return redirect(url_for('auth.login'))

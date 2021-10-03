@@ -1,5 +1,6 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
+from sqlalchemy import and_, or_
 
 from app import db, login_manager
 
@@ -16,7 +17,12 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(100), nullable=False)
     username = db.Column(db.String(100), nullable=False)
     password_hash = db.Column(db.String(150), nullable=False)
-    account_type = db.Column(db.Enum('ADMIN', 'TRAVEL GUIDE', 'TOURIST', name='account_type'), nullable=False)
+    account_type = db.Column(
+        db.Enum('ADMIN', 'TRAVEL GUIDE', 'TOURIST', name='account_type'), nullable=True, default='TOURIST'
+    )
+    desired_account_type = db.Column(
+        db.Enum('ADMIN', 'TRAVEL GUIDE', 'TOURIST', name='desired_account_type'), nullable=False,
+    )
 
     @property
     def password(self):
@@ -28,3 +34,25 @@ class User(db.Model, UserMixin):
 
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    @classmethod
+    def get_pending_account_type_requests(cls):
+        non_pending_users_list_of_tuples = cls.query.with_entities(cls.id).filter(
+            or_(
+                and_(
+                    cls.account_type == 'ADMIN',
+                    cls.desired_account_type == 'ADMIN',
+                ),
+                and_(
+                    cls.account_type == 'TOURIST',
+                    cls.desired_account_type == 'TOURIST',
+                ),
+                and_(
+                    cls.account_type == 'TRAVEL GUIDE',
+                    cls.desired_account_type == 'TRAVEL GUIDE',
+                ),
+            )
+        ).all()
+        non_pending_users_list = [user_id for (user_id, ) in non_pending_users_list_of_tuples]
+
+        return [user for user in cls.query.all() if user.id not in non_pending_users_list]
