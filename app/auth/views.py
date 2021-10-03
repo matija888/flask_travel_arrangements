@@ -25,7 +25,7 @@ def register():
                 db.session.commit()
                 login_user(user)
                 flash('You have successfully created a new user account. Welcome')
-                return redirect(url_for('main.edit_user_data', user_id=user.id))
+                return redirect(url_for('main.index'))
             else:
                 # redirect back to the login page and inform the user that two passwords do not match
                 flash('The password that you entered does not match with confirmed password. Please try again', 'error')

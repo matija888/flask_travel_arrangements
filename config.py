@@ -11,7 +11,7 @@ class Config(object):
 
 
 class DevelopmentConfig(Config):
-    pass
+    LOGIN_DISABLED = False
 
 
 class TestingConfig(Config):

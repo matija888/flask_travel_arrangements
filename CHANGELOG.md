@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 
+## [0.6.1] - 2021-10-03
+### Fixed
+- When a user registering in the app first time, redirect them to the index(home) page
+- If there is no action related to changing account type request, do not display desired account type
+- Show a message related to waiting for a request (related to the change of the account type) to be resolved
+only for a user who has sent the request.
+- Set LOGIN_DISABLED to be False when we load development environment configuration  
 ## [0.6.0] - 2021-10-03
 ### Added 
 - Edit user data page
