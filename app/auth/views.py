@@ -1,5 +1,5 @@
 from flask import render_template, request, flash, redirect, url_for
-from flask_login import login_user, logout_user
+from flask_login import login_user, logout_user, login_required
 
 from . import auth
 from app.models import User
@@ -19,11 +19,13 @@ def register():
                     first_name=form['first_name'], last_name=form['last_name'], username=form['username'],
                     email=form['email'], password=form['password'], desired_account_type=form['desired_account_type']
                 )
+                if form['desired_account_type'] in ['TRAVEL GUIDE', 'ADMIN']:
+                    user.confirmed_desired_account_type = 'pending'
                 db.session.add(user)
                 db.session.commit()
                 login_user(user)
                 flash('You have successfully created a new user account. Welcome')
-                return redirect(url_for('main.index'))
+                return redirect(url_for('main.edit_user_data', user_id=user.id))
             else:
                 # redirect back to the login page and inform the user that two passwords do not match
                 flash('The password that you entered does not match with confirmed password. Please try again', 'error')
@@ -63,6 +65,7 @@ def login():
 
 
 @auth.route('/logout', methods=['GET'])
+@login_required
 def logout():
     logout_user()
     flash('You have been logged out. Bye!')

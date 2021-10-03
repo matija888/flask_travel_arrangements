@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Travel Arrangements - Edit User Data{% endblock %}
+
+{% block stylesheets %}
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'error' %}
+                    <div class="alert alert-danger">
+                        {{ message|safe }}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        {{ message|safe }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('main.edit_user_data', user_id=user.id) }}" enctype="multipart/form-data" class="row">
+
+            <div class="offset-3 col-6">
+
+                <div class="row mb-2">
+                    <div class="offset-1 col-10">
+                        {% if current_user.id == user.id %}
+                            <h1>Edit your data:</h1>
+                        {% else %}
+                            <h1>Edit user's data:</h1>
+                        {% endif %}
+                        <hr>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        First name:
+                    </div>
+                    <div class="col-8">
+                        <input type="text" name="first_name" class="form-control" placeholder="First name"
+                               value="{{ user.first_name }}"
+                        >
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        Last name:
+                    </div>
+                    <div class="col-8">
+                        <input type="text" name="last_name" class="form-control" placeholder="Last name"
+                        value="{{ user.last_name }}"
+                        >
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        Email:
+                    </div>
+                    <div class="col-8">
+                        <input type="email" name="email" class="form-control" placeholder="Email"
+                        value="{{ user.email }}"
+                        >
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        Username:
+                    </div>
+                    <div class="col-8">
+                        <input type="text" name="username" class="form-control" placeholder="Username"
+                        value="{{ user.username }}"
+                        >
+                    </div>
+                </div>
+
+                {% if user.confirmed_desired_account_type != 'pending' %}
+                <div class="row mb-2">
+                    <div class="col-4 text-right">
+                        Desired account type:
+                    </div>
+                    <div class="col-8">
+                        <select name="desired_account_type" class="form-control">
+                            {% for account_type in ['TRAVEL GUIDE', 'ADMIN'] %}
+                                <option value="{{ account_type }}"
+                                {% if user.desired_account_type == account_type %}
+                                    selected
+                                {% endif %}
+                                >{{ account_type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="row mb-2">
+                    <div class="offset-9 col-3 text-right">
+                        <input type="submit" class="btn btn-success" value="Login">
+                    </div>
+                </div>
+
+            </div>
+
+        </form>
+
+{% endblock %}

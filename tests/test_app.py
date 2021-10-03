@@ -151,6 +151,28 @@ class TestApp(TestCase):
         self.test_approve_account_type_permission_request()
         self.test_login_page_post_recognized_user()
 
+    def test_loading_user_edit_page(self):
+        response = self.client.get('/edit_user_data/1')
+        self.assertEqual(response.status_code, 200)
+
+    def test_edit_user_data_post_request(self):
+        self.test_register_user()
+        response = self.client.post('/edit_user_data/1', data=dict(
+            first_name='John', last_name='Doe', username='john_doe', email='john@doe.com',
+            desired_account_type='TOURIST'
+        ))
+        self.assertEqual(response.status_code, 200)
+        # check to see if data has been changed
+        user = User.query.filter_by(id=1).first()
+        self.assertEqual(user.first_name, 'John')
+        self.assertEqual(user.last_name, 'Doe')
+        self.assertEqual(user.username, 'john_doe')
+        self.assertEqual(user.email, 'john@doe.com')
+        self.assertEqual(user.desired_account_type, 'TOURIST')
+
+    def test_admin_panel_get_request(self):
+        response = self.client.get('/admin_panel')
+        self.assertEqual(response.status_code, 200)
 
 
 if __name__ == '__main__':

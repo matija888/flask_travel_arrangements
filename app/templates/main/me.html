@@ -46,7 +46,37 @@
                         <th>Account type:</th>
                         <td>{{ current_user.account_type }}</td>
                     </tr>
+                    {% if current_user.account_type != 'ADMIN' %}
+                    <tr>
+                        <th>Desired account type:</th>
+                        <td>{{ current_user.desired_account_type }}</td>
+                    </tr>
+                    <tr>
+
+                        {% if current_user.confirmed_desired_account_type == 'approve' %}
+                            <td colspan="2" class="alert alert-success">
+                            Desired account type is approved by admin.
+                            </td>
+                        {% elif current_user.confirmed_desired_account_type == 'reject' %}
+                            <td colspan="2" class="alert alert-danger">
+                            Desired account type is rejected by admin.
+                            </td>
+                        {% else %}
+                            <td colspan="2" class="alert alert-info">
+                            Desired account type is waiting to be resolved by Admin.
+                            </td>
+                        {% endif %}
+
+                    </tr>
+                    {% endif %}
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2">
+                            <a href="{{ url_for('main.edit_user_data', user_id=current_user.id) }}" class="btn btn-info">Edit profile data</a>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>

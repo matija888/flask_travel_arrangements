@@ -17,6 +17,7 @@ class DevelopmentConfig(Config):
 class TestingConfig(Config):
     SQLALCHEMY_DATABASE_URI = 'postgresql://postgres:root@127.0.0.1/test_travel_arrangements'
     PRESERVE_CONTEXT_ON_EXCEPTION = False
+    LOGIN_DISABLED = True
 
 
 class ProductionConfig(Config):

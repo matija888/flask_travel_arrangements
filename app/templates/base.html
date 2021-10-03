@@ -27,6 +27,12 @@
             <a href="{{ url_for('main.index') }}">Home</a>
         </li>
 
+        {% if current_user.account_type == 'ADMIN' %}
+        <li class="nav-item">
+            <a href="{{ url_for('main.admin_panel') }}">Admin panel</a>
+        </li>
+        {% endif %}
+
         <li class="nav-item">
             <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Log out</a>
         </li>

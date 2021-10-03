@@ -23,6 +23,9 @@ class User(db.Model, UserMixin):
     desired_account_type = db.Column(
         db.Enum('ADMIN', 'TRAVEL GUIDE', 'TOURIST', name='desired_account_type'), nullable=False,
     )
+    confirmed_desired_account_type = db.Column(
+        db.Enum('approve', 'reject', 'pending', name='confirmed_desired_account_type'), nullable=True
+    )
 
     @property
     def password(self):
@@ -55,4 +58,10 @@ class User(db.Model, UserMixin):
         ).all()
         non_pending_users_list = [user_id for (user_id, ) in non_pending_users_list_of_tuples]
 
-        return [user for user in cls.query.all() if user.id not in non_pending_users_list]
+        return [
+            user
+            for user in cls.query.all()
+            if user.id not in non_pending_users_list and user.confirmed_desired_account_type not in [
+                'approve', 'reject'
+            ]
+        ]

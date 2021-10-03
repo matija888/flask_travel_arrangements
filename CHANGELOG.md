@@ -11,15 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 
+## [0.6.0] - 2021-10-03
+### Added 
+- Edit user data page
+- confirmed_desired_account_type column in user table 
+  which represents if admin has resolved pending requests for changing account type (approve/reject/pending)
+### Fixed
+- added requires_account_type and login_required decorators in order to restrict access to the admin panel
+
 ## [0.5.0] - 2021-10-03
-
-### Changed
-- Give option to the user to choose which account type they want to have
-
 ### Added 
 - Add the admin page 
 - On the admin page, Admin can solve requests from the user related to account type
 - Added modals for two-step (pop-up windows) for approving/rejecting a request
+### Changed
+- Give option to the user to choose which account type they want to have
+### Fixed
 
 ## [0.4.0] - 2021-10-02
 ### Added
