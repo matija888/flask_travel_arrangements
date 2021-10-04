@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Create Reservation{% endblock %}
+
+{% block stylesheets %}
+    {{ super() }}
+    <link href="{{ url_for('static', filename='css/bootstrap-datepicker3.min.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'error' %}
+                    <div class="alert alert-danger">
+                        {{ message|safe }}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        {{ message|safe }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <h2>Create reservation for arrangement id {{ arrangement.id }}:</h2>
+
+    <form method="POST" action="{{ url_for('main.create_reservation', arrangement_id=arrangement.id) }}" enctype="multipart/form-data" class="row">
+
+        <div class="col-4">
+
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    Destination:
+                </div>
+                <div class="col-8">
+                    {{ arrangement.destination }}
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    Start date:
+                </div>
+                <div class="col-8">
+                    {{ arrangement.start_date.strftime('%d.%m.%Y') }}
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    End date:
+                </div>
+                <div class="col-8">
+                    {{ arrangement.end_date.strftime('%d.%m.%Y') }}
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    Description:
+                </div>
+                <div class="col-8">
+                    {{ arrangement.description }}
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    Max number of persons:
+                </div>
+                <div class="col-8">
+                    {{ arrangement.number_of_persons }}
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    Price:
+                </div>
+                <div class="col-8">
+                    {{ arrangement.price }}
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    Assigned travel guide:
+                </div>
+                <div class="col-8">
+                    {{ arrangement.guide.first_name }} {{ arrangement.guide.last_name }}
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-6">
+            <div class="row mb-2">
+                <div class="col-4">Number of persons:</div>
+                <div class="col-4">
+                    <input type="number" name="number_of_persons" min="1" max="{{ arrangement.number_of_persons }}"
+                           step="1" class="form-control"
+                           placeholder="Number of persons" value="{{ arrangement.number_of_persons }}"
+                    >
+                </div>
+            </div>
+            <div class="row">
+                <div class="offset-4 col-4">
+                    <input type="submit" class="btn btn-success" value="Create reservation">
+                </div>
+            </div>
+        </div>
+
+
+    </form>
+
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/bootstrap-datepicker.min.js') }}"></script>
+    <script>
+        $('.input-date').datepicker({
+            format: "dd.mm.yyyy",
+            weekStart: 1,
+            todayBtn: "linked",
+            clearBtn: true,
+            orientation: "bottom",
+            daysOfWeekHighlighted: "0,6",
+            autoclose: true,
+            todayHighlight: true
+        });
+    </script>
+{% endblock %}

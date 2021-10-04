@@ -39,6 +39,12 @@
         </li>
         {% endif %}
 
+        {% if current_user.account_type == 'TOURIST' %}
+        <li class="nav-item">
+            <a href="{{ url_for('main.reservations') }}">Reservations</a>
+        </li>
+        {% endif %}
+
         <li class="nav-item">
             <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Log out</a>
         </li>

@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 
+## [0.10.0] - 2021-10-05
+### Added
+- Create reservations feature
+  - Allow TOURIST to book travel arrangements
+  - TOURIST can see all unbooked arrangements and all arrangements booked by them
+### Fixed
+- Fix get_available_travel_guides_ids method to return correct result 
+  (take into account that we have four cases where some travel can overlap other travel)
+
 ## [0.9.0] - 2021-10-04
 ### Added
 - Allow ADMIN to assign a travel guide to certain travel arrangement

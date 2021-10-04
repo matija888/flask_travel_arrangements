@@ -1,7 +1,9 @@
+from datetime import date, timedelta
+from decimal import Decimal
 import datetime
 
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin
+from flask_login import UserMixin, current_user
 from sqlalchemy import and_, or_
 
 from app import db, login_manager
@@ -29,6 +31,8 @@ class User(db.Model, UserMixin):
     confirmed_desired_account_type = db.Column(
         db.Enum('approve', 'reject', 'pending', name='confirmed_desired_account_type'), nullable=True
     )
+
+    # travel_guide = db.relationship('Arrangement', foreign_keys='Arrangement.travel_guide_id')
 
     @property
     def password(self):
@@ -79,7 +83,7 @@ class User(db.Model, UserMixin):
         """
         current_date = datetime.date.today()
 
-        # get ids of users who has assigned to a certain travel arrangement
+        # get ids of users who has been assigned to a certain travel arrangement
         # and period ot that arrangement is overlapping with period between start_travel_date and end_travel_date
         non_available_assigned_guides_ids_tuples = cls.query.with_entities(cls.id)\
             .join(Arrangement, User.id == Arrangement.travel_guide_id, isouter=True)\
@@ -88,9 +92,33 @@ class User(db.Model, UserMixin):
                 Arrangement.travel_guide_id != None,
                 or_(
                     and_(
-                        Arrangement.start_date > current_date,
-                        start_travel_date < Arrangement.end_date,
-                        end_travel_date > Arrangement.start_date
+                        Arrangement.start_date >= current_date,
+                        or_(
+                            and_(
+                                start_travel_date <= Arrangement.end_date,
+                                start_travel_date >= Arrangement.start_date,
+                                end_travel_date >= Arrangement.start_date,
+                                end_travel_date >= Arrangement.end_date
+                            ),
+                            and_(
+                                start_travel_date <= Arrangement.start_date,
+                                start_travel_date <= Arrangement.end_date,
+                                end_travel_date >= Arrangement.start_date,
+                                end_travel_date <= Arrangement.end_date
+                            ),
+                            and_(
+                                start_travel_date <= Arrangement.start_date,
+                                start_travel_date <= Arrangement.end_date,
+                                end_travel_date >= Arrangement.start_date,
+                                end_travel_date >= Arrangement.end_date,
+                            ),
+                            and_(
+                                start_travel_date >= Arrangement.start_date,
+                                start_travel_date <= Arrangement.end_date,
+                                end_travel_date >= Arrangement.start_date,
+                                end_travel_date <= Arrangement.end_date,
+                            )
+                        )
                     )
                 )
             ).all()
@@ -120,4 +148,47 @@ class Arrangement(db.Model):
 
     guide = db.relationship('User', foreign_keys=[travel_guide_id], backref='arrangement')
 
+    @classmethod
+    def get_all_unbooked_arrangements(cls):
+        five_days_after_today = date.today() + timedelta(days=5)
+        return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
+            Reservation.user_id == None,
+            Arrangement.start_date > five_days_after_today
+        ).order_by(Arrangement.start_date).all()
+
+
+class Reservation(db.Model):
+    __tablename__ = 'reservation'
+    id = db.Column(db.Integer, primary_key=True)
+    arrangement_id = db.Column(db.Integer, db.ForeignKey('arrangement.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    number_of_persons = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Numeric(9, 2), nullable=False)
+
+    arrangement = db.relationship('Arrangement', foreign_keys=[arrangement_id])
+    user = db.relationship('User', foreign_keys=[user_id])
+
+    @staticmethod
+    def discounted_reservations(price, number_of_persons):
+        return (price * (number_of_persons - 3)) * Decimal(0.9)
+
+    @classmethod
+    def create_reservation(cls, arrangement, user_id, number_of_persons):
+        """"
+            return: return just created reservation
+        """
+        if number_of_persons > 3:
+            price = arrangement.price * 3 + cls.discounted_reservations(arrangement.price, number_of_persons)
+        else:
+            price = arrangement.price * number_of_persons
+        reservation = Reservation(
+            arrangement_id=arrangement.id, user_id=user_id, number_of_persons=number_of_persons, price=price
+        )
+        db.session.add(reservation)
+        db.session.commit()
+        return reservation
+
+    @classmethod
+    def get_all_my_reservations(cls):
+        return cls.query.filter_by()
 

@@ -1,10 +1,10 @@
-from datetime import date
+from datetime import date, timedelta
 
 from flask import render_template, flash, request, redirect, url_for
-from flask_login import login_required
+from flask_login import login_required, current_user
 
 from . import main
-from app.models import User, Arrangement
+from app.models import User, Arrangement, Reservation
 from app import db
 from app.decorators import requires_account_types
 
@@ -115,3 +115,29 @@ def cancel_arrangement(arrangement_id):
     db.session.add(arrangement)
     db.session.commit()
     return redirect(url_for('main.arrangements'))
+
+
+@main.route('/reservations')
+@login_required
+def reservations():
+    arrangements = Arrangement.get_all_unbooked_arrangements()
+    reservations = Reservation.get_all_my_reservations()
+    return render_template('main/reservations.html', arrangements=arrangements, reservations=reservations)
+
+
+@main.route('/create_reservation/<arrangement_id>', methods=['GET', 'POST'])
+def create_reservation(arrangement_id):
+    if request.method == 'POST':
+        form = request.form
+        number_of_persons = int(form['number_of_persons'])
+        arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
+        if number_of_persons > arrangement.number_of_persons:
+            flash('You cannot book reservation with number of persons greater than arrangement number of persons.')
+            return redirect(url_for('main.create_reservation'))
+        else:
+            Reservation.create_reservation(arrangement, current_user.id, number_of_persons)
+            flash(f'You have successfully created reservation for {arrangement.description}')
+            return redirect(url_for('main.reservations'))
+    else:
+        arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
+        return render_template('main/create_reservation.html', arrangement=arrangement)

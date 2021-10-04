@@ -6,7 +6,7 @@ from flask_testing import TestCase
 from flask_login import LoginManager
 
 from app import create_app, db
-from app.models import User, Arrangement
+from app.models import User, Arrangement, Reservation
 
 # Creates a new instance of the Flask application. The reason for this
 # is that we can't interrupt the application instance that is currently
@@ -249,16 +249,23 @@ class TestApp(TestCase):
 
         response = self.client.post('/arrangements', data=dict(
             destination='Spain', start_date='2021-11-01', end_date='2021-11-10', description='Autumn in Spain.',
-            number_of_persons=2, price=580.00, travel_guide_id=2
+            number_of_persons=4, price=580.00, travel_guide_id=2
         ))
+
+        # force travel_guide_id=2 to be travel guide for arrangement_id=1
+        # because we removed inserting travel guide when inserting arrangement
+        arrangement = Arrangement.query.filter_by(id=1).first()
+        arrangement.travel_guide_id = 2
+        db.session.add(arrangement)
+        db.session.commit()
+
         self.assertEqual(response.status_code, 200)
         arrangement = Arrangement.query.filter_by(description='Autumn in Spain.').first()
         self.assertEqual(arrangement.id, 1)
         self.assertEqual(arrangement.start_date, date(2021, 11, 1))
         self.assertEqual(arrangement.end_date, date(2021, 11, 10))
-        self.assertEqual(arrangement.number_of_persons, 2)
+        self.assertEqual(arrangement.number_of_persons, 4)
         self.assertEqual(arrangement.price, 580.00)
-        self.assertEqual(arrangement.travel_guide_id, 2)
 
     def test_edit_arrangement_page(self):
         self.test_insert_new_travel_arrangement_no_travel_guides_in_db()
@@ -303,14 +310,39 @@ class TestApp(TestCase):
         # insert a new travel arrangement and assign that arrangement to the only available guide (Travel Guide 2 id=3)
         self.client.post('/arrangements', data=dict(
             destination='Russia', start_date='2021-10-30', end_date='2021-11-11', description='Russia travel desc.',
-            number_of_persons=2, price=1058.00, travel_guide_id=3
+            number_of_persons=2, price=1058.00
         ))
+        # force travel_guide_id=2 to be travel guide for arrangement_id=1
+        # because we removed inserting travel guide when inserting arrangement
+        arrangement = Arrangement.query.filter_by(id=2).first()
+        arrangement.travel_guide_id = 3
+        db.session.add(arrangement)
+        db.session.commit()
+
         available_guides = User.get_available_travel_guides_ids('2021-11-08', '2021-12-15')
         self.assertEqual(len(available_guides), 0)  # there should be no available guide
 
         available_guides = User.get_available_travel_guides_ids('2022-01-08', '2022-01-30')
         self.assertEqual(len(available_guides), 2)  # there should be no available guide
 
+    def test_reservations_page(self):
+        response = self.client.get('/reservations')
+        self.assertEqual(response.status_code, 200)
+
+    def test_create_new_reservation(self):
+        self.test_insert_new_travel_arrangement_with_travel_guides()
+        response = self.client.post('/create_reservation/1', data=dict(number_of_persons=4))
+        self.assertEqual(response.status_code, 302)
+        all_reservations = Reservation.query.all()
+        self.assertEqual(len(all_reservations), 1)
+        reservation = Reservation.query.filter_by(id=1).first()
+        self.assertEqual(reservation.number_of_persons, 4)
+        self.assertEqual(reservation.price, 3*580 + 580*0.9)
+
+    def test_all_unbooked_arrangements(self):
+        self.test_create_new_reservation()
+        unbooked_arrangements = Arrangement.get_all_unbooked_arrangements()
+        self.assertEqual(len(unbooked_arrangements), 0)
 
 if __name__ == '__main__':
     unittest.main()

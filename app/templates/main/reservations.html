@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Travel Reservations {% endblock %}
+
+{% block stylesheets %}
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'error' %}
+                    <div class="alert alert-danger">
+                        {{ message|safe }}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        {{ message|safe }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <h2>My reservations:</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Destination</th>
+                <th>Start date</th>
+                <th>End date</th>
+                <th>Description</th>
+                <th>Number of persons</th>
+                <th>Price</th>
+                <th>Travel guide</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for reservation in reservations %}
+            <tr>
+                <td>{{ reservation.arrangement.destination }}</td>
+                <td>{{ reservation.arrangement.start_date.strftime('%d.%m.%Y') }}</td>
+                <td>{{ reservation.arrangement.end_date.strftime('%d.%m.%Y') }}</td>
+                <td>{{ reservation.arrangement.description }}</td>
+                <td>{{ reservation.number_of_persons }}</td>
+                <td>{{ reservation.price }}</td>
+                <td>{{ reservation.arrangement.guide.first_name }} {{ reservation.arrangement.guide.last_name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>All travel arrangements</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Destination</th>
+                <th>Start date</th>
+                <th>End date</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Travel guide</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for arrangement in arrangements %}
+            <tr>
+                <td>{{ arrangement.destination }}</td>
+                <td>{{ arrangement.start_date.strftime('%d.%m.%Y') }}</td>
+                <td>{{ arrangement.end_date.strftime('%d.%m.%Y') }}</td>
+                <td>{{ arrangement.description }}</td>
+                <td>{{ arrangement.price }}</td>
+                <td>{{ arrangement.guide.first_name }} {{ arrangement.guide.last_name }}</td>
+                <td>
+                    <a href="{{ url_for('main.create_reservation', arrangement_id=arrangement.id) }}" class="btn btn-info">Reserve</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}
