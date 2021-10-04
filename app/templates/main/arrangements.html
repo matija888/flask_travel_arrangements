@@ -28,7 +28,7 @@
     <hr>
 
     {% if current_user.account_type == 'ADMIN' %}
-    <h2>Insert new travel arrangements</h2>
+    <h2>Insert a new travel arrangement</h2>
     <form method="POST" class="container" action="{{ url_for('main.arrangements') }}">
 
         <div class="row mb-2">
@@ -92,6 +92,10 @@
                 <th>End date</th>
                 <th>Description</th>
                 <th>Price</th>
+                {% if current_user.account_type in ['ADMIN', 'TRAVEL GUIDE'] %}
+                <th>Action (edit)</th>
+                <th>Action (cancel)</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
@@ -102,6 +106,29 @@
                 <td>{{ arrangement.end_date }}</td>
                 <td>{{ arrangement.description }}</td>
                 <td>{{ arrangement.price }}</td>
+                {% if current_user.account_type in ['ADMIN', 'TRAVEL GUIDE'] %}
+                    {% if (arrangement.start_date - current_date).days > 5 %}
+                    <td>
+                        <a href="{{ url_for('main.edit_arrangement', arrangement_id=arrangement.id) }}" class="btn btn-info">Edit</a>
+                    </td>
+                    {% else %}
+                    <td>
+                        Not editable
+                    </td>
+                    {% endif %}
+                {% endif %}
+
+                {% if current_user.account_type in ['ADMIN'] %}
+                    {% if (arrangement.start_date - current_date).days > 5 %}
+                    <td>
+                        <a href="{{ url_for('main.cancel_arrangement', arrangement_id=arrangement.id) }}" class="btn btn-danger">Cancel</a>
+                    </td>
+                    {% else %}
+                        <td>Too late to cancel</td>
+                    {% endif %}
+                {% else %}
+                    <td>Do not have permission</td>
+                {% endif %}
             </tr>
             {% endfor %}
         </tbody>

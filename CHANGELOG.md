@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 
+## [0.8.0] - 2021-10-04
+### Added
+- Insert a travel arrangement (ADMIN and TRAVEL GUIDE have this permission)
+- Edit a travel arrangement (5 days before the travel start date at the latest)
+  - ADMIN can edit all attributes of the travel arrangement 
+  - TRAVEL can edit description of the travel arrangement
+- Cancel a travel arrangement (5 days before the travel start date at the latest)
+  - ADMIN can cancel the travel arrangement
+
 ## [0.7.0] - 2021-10-03
 ### Added 
 - Add travel arrangements page

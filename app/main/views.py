@@ -1,4 +1,6 @@
-from flask import render_template, flash, request
+from datetime import date
+
+from flask import render_template, flash, request, redirect, url_for
 from flask_login import login_required
 
 from . import main
@@ -74,4 +76,31 @@ def arrangements():
         db.session.commit()
         flash('You have successfully inserted a new travel arrangement.')
     arrangements = Arrangement.query.all()
-    return render_template('main/arrangements.html', arrangements=arrangements)
+    return render_template('main/arrangements.html', arrangements=arrangements, current_date=date.today())
+
+
+@main.route('/edit_arrangement/<arrangement_id>', methods=['GET', 'POST'])
+@login_required
+@requires_account_types('ADMIN', 'TRAVEL GUIDE')
+def edit_arrangement(arrangement_id):
+    arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
+    if request.method == 'POST':
+        form = request.form
+        for field in form:
+            if hasattr(arrangement, field):
+                setattr(arrangement, field, form[field])
+        db.session.add(arrangement)
+        db.session.commit()
+        flash(f'You have just successfully changed data for the travel arrangement id {arrangement.id}')
+    return render_template('main/edit_arrangement.html', arrangement=arrangement, current_date=date.today())
+
+
+@main.route('/cancel_arrangement/<arrangement_id>')
+@login_required
+@requires_account_types('ADMIN')
+def cancel_arrangement(arrangement_id):
+    arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
+    arrangement.status = 'inactive'
+    db.session.add(arrangement)
+    db.session.commit()
+    return redirect(url_for('main.arrangements'))

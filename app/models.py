@@ -77,3 +77,4 @@ class Arrangement(db.Model):
     destination = db.Column(db.String(50), nullable=False)
     number_of_persons = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Numeric(9, 2), nullable=False)
+    status = db.Column(db.Enum('active', 'inactive', name='status'), nullable=True, default='active')

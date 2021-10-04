@@ -179,7 +179,7 @@ class TestApp(TestCase):
         response = self.client.get('/arrangements')
         self.assertEqual(response.status_code, 200)
 
-    def test_insert_new_travel_arrangements(self):
+    def test_insert_new_travel_arrangement(self):
         response = self.client.post('/arrangements', data=dict(
             destination='Spain', start_date='2021-11-01', end_date='2021-11-10', description='Autumn in Spain.',
             number_of_persons=2, price=580.00
@@ -191,6 +191,32 @@ class TestApp(TestCase):
         self.assertEqual(arrangement.end_date, date(2021, 11, 10))
         self.assertEqual(arrangement.number_of_persons, 2)
         self.assertEqual(arrangement.price, 580.00)
+
+    def test_edit_arrangement_page(self):
+        self.test_insert_new_travel_arrangement()
+        response = self.client.get('/edit_arrangement/1')
+        self.assertEqual(response.status_code, 200)
+
+    def test_edit_travel_arrangement(self):
+        self.test_insert_new_travel_arrangement()
+        response = self.client.post('/edit_arrangement/1', data=dict(
+            destination='Spain', start_date='2021-11-05', end_date='2021-11-11', description='Tenerife',
+            number_of_persons=3, price=1020.00
+        ))
+        self.assertEqual(response.status_code, 200)
+        arrangement = Arrangement.query.filter_by(id=1).first()
+        self.assertEqual(arrangement.start_date, date(2021, 11, 5))
+        self.assertEqual(arrangement.end_date, date(2021, 11, 11))
+        self.assertEqual(arrangement.description, 'Tenerife')
+        self.assertEqual(arrangement.number_of_persons, 3)
+        self.assertEqual(arrangement.price, 1020.00)
+
+    def test_cancel_arrangement(self):
+        self.test_insert_new_travel_arrangement()
+        response = self.client.get('/cancel_arrangement/1')
+        arrangement = Arrangement.query.filter_by(id=1).first()
+        self.assertEqual(arrangement.status, 'inactive')
+        self.assertEqual(response.status_code, 302)
 
 
 if __name__ == '__main__':
