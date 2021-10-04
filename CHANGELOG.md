@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 
+## [0.9.0] - 2021-10-04
+### Added
+- Allow ADMIN to assign a travel guide to certain travel arrangement
+  - Admin can only assign available travel guide - those who are not assigned to any arrangement 
+    or who is assigned to a certain arrangement but not for the passed period of time
+    
 ## [0.8.0] - 2021-10-04
 ### Added
 - Insert a travel arrangement (ADMIN and TRAVEL GUIDE have this permission)

@@ -75,7 +75,7 @@ def arrangements():
         db.session.add(arrangement)
         db.session.commit()
         flash('You have successfully inserted a new travel arrangement.')
-    arrangements = Arrangement.query.all()
+    arrangements = Arrangement.query.order_by(Arrangement.start_date).all()
     return render_template('main/arrangements.html', arrangements=arrangements, current_date=date.today())
 
 
@@ -88,11 +88,22 @@ def edit_arrangement(arrangement_id):
         form = request.form
         for field in form:
             if hasattr(arrangement, field):
-                setattr(arrangement, field, form[field])
+                if field == 'travel_guide_id':
+                    # if travel guide is chosen in insert a new travel arrangement use that value
+                    # if user did not chose travel guide that means that we get 'None' string from the client
+                    travel_guide_id = form['travel_guide_id'] if form['travel_guide_id'] != 'None' else None
+                    setattr(arrangement, 'travel_guide_id', travel_guide_id)
+                else:
+                    setattr(arrangement, field, form[field])
         db.session.add(arrangement)
         db.session.commit()
         flash(f'You have just successfully changed data for the travel arrangement id {arrangement.id}')
-    return render_template('main/edit_arrangement.html', arrangement=arrangement, current_date=date.today())
+    travel_guides = User.get_available_travel_guides_ids(
+        start_travel_date=arrangement.start_date, end_travel_date=arrangement.end_date
+    )
+    return render_template(
+        'main/edit_arrangement.html', arrangement=arrangement, current_date=date.today(), travel_guides=travel_guides
+    )
 
 
 @main.route('/cancel_arrangement/<arrangement_id>')

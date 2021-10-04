@@ -26,105 +26,142 @@
 
     <form method="POST" action="{{ url_for('main.edit_arrangement', arrangement_id=arrangement.id) }}" enctype="multipart/form-data" class="row">
 
-            <div class="offset-3 col-6">
+        <div class="offset-3 col-6">
 
-                <div class="row mb-2">
-                    <div class="offset-1 col-10">
-                        <h1>Edit arrangement id {{ arrangement.id }}:</h1>
-                        <hr>
-                    </div>
+            <div class="row mb-2">
+                <div class="offset-1 col-10">
+                    <h1>Edit arrangement id {{ arrangement.id }}:</h1>
+                    <hr>
                 </div>
-
-                <div class="row mb-2">
-                    <div class="col-4 text-right">
-                        Destination:
-                    </div>
-                    <div class="col-8">
-                        <input type="text" name="destination" class="form-control" placeholder="Destination"
-                               value="{{ arrangement.destination }}"
-                               {% if current_user.account_type != 'ADMIN' %}
-                                   disabled
-                                {% endif %}
-                        >
-                    </div>
-                </div>
-
-                <div class="row mb-2">
-                    <div class="col-4 text-right">
-                        Start date:
-                    </div>
-                    <div class="col-8">
-                        <input type="text" name="start_date" class="form-control input-date" placeholder="Start date"
-                        value="{{ arrangement.start_date.strftime('%d.%m.%Y') }}"
-                               {% if current_user.account_type != 'ADMIN' %}
-                                   disabled
-                                {% endif %}
-                        >
-                    </div>
-                </div>
-
-                <div class="row mb-2">
-                    <div class="col-4 text-right">
-                        End date:
-                    </div>
-                    <div class="col-8">
-                        <input type="text" name="end_date" class="form-control input-date" placeholder="End date"
-                        value="{{ arrangement.end_date.strftime('%d.%m.%Y') }}"
-                               {% if current_user.account_type != 'ADMIN' %}
-                                   disabled
-                                {% endif %}
-                        >
-                    </div>
-                </div>
-
-                <div class="row mb-2">
-                    <div class="col-4 text-right">
-                        Description:
-                    </div>
-                    <div class="col-8">
-                        <input type="text" name="description" class="form-control" placeholder="Description"
-                        value="{{ arrangement.description }}"
-                        >
-                    </div>
-                </div>
-
-                <div class="row mb-2">
-                    <div class="col-4 text-right">
-                        Number of persons:
-                    </div>
-                    <div class="col-8">
-                        <input type="number" name="number_of_persons" min="1" step="1" class="form-control"
-                               placeholder="Number of persons" value="{{ arrangement.number_of_persons }}"
-                               {% if current_user.account_type != 'ADMIN' %}
-                                   disabled
-                                {% endif %}
-                        >
-                    </div>
-                </div>
-
-                <div class="row mb-2">
-                    <div class="col-4 text-right">
-                        Price:
-                    </div>
-                    <div class="col-8">
-                        <input type="number" step="0.01" min="0" max="99999.99" name="price" class="form-control"
-                               value="{{ arrangement.price }}"
-                               {% if current_user.account_type != 'ADMIN' %}
-                                   disabled
-                                {% endif %}
-                        >
-                    </div>
-                </div>
-
-                <div class="row mb-2">
-                    <div class="offset-9 col-3 text-right">
-                        <input type="submit" class="btn btn-success" value="Login">
-                    </div>
-                </div>
-
             </div>
 
-        </form>
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    Destination:
+                </div>
+                <div class="col-8">
+                    <input type="text" name="destination" class="form-control" placeholder="Destination"
+                           value="{{ arrangement.destination }}"
+                           {% if current_user.account_type != 'ADMIN' %}
+                               disabled
+                            {% endif %}
+                    >
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    Start date:
+                </div>
+                <div class="col-8">
+                    <input type="text" name="start_date" class="form-control input-date" placeholder="Start date"
+                    value="{{ arrangement.start_date.strftime('%d.%m.%Y') }}"
+                           {% if current_user.account_type != 'ADMIN' %}
+                               disabled
+                            {% endif %}
+                    >
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    End date:
+                </div>
+                <div class="col-8">
+                    <input type="text" name="end_date" class="form-control input-date" placeholder="End date"
+                    value="{{ arrangement.end_date.strftime('%d.%m.%Y') }}"
+                           {% if current_user.account_type != 'ADMIN' %}
+                               disabled
+                            {% endif %}
+                    >
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    Description:
+                </div>
+                <div class="col-8">
+                    <input type="text" name="description" class="form-control" placeholder="Description"
+                    value="{{ arrangement.description }}"
+                    >
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    Number of persons:
+                </div>
+                <div class="col-8">
+                    <input type="number" name="number_of_persons" min="1" step="1" class="form-control"
+                           placeholder="Number of persons" value="{{ arrangement.number_of_persons }}"
+                           {% if current_user.account_type != 'ADMIN' %}
+                               disabled
+                            {% endif %}
+                    >
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    Price:
+                </div>
+                <div class="col-8">
+                    <input type="number" step="0.01" min="0" max="99999.99" name="price" class="form-control"
+                           value="{{ arrangement.price }}"
+                           {% if current_user.account_type != 'ADMIN' %}
+                               disabled
+                            {% endif %}
+                    >
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    Assigned travel guide:
+                </div>
+                <div class="col-8">
+                    {% if arrangement.travel_guide_id %}
+                    {{ arrangement.guide.first_name }} {{ arrangement.guide.last_name }}
+                    {% else %}
+                        This travel does not have assigned travel guide.
+                    {% endif %}
+                </div>
+            </div>
+            {% if current_user.account_type == 'ADMIN' %}
+            <div class="row mb-2">
+                <div class="col-4 text-right">
+                    Change guide to:
+                </div>
+                <div class="col-8">
+                    <select name="travel_guide_id" class="form-control">
+
+                        {% if arrangement.travel_guide_id %}
+                        <option value="{{ arrangement.travel_guide_id }}">
+                            {{ arrangement.guide.first_name }} {{ arrangement.guide.last_name }}
+                        </option>
+                        {% endif %}
+
+                        {% for guide in travel_guides %}
+                        <option value="{{ guide.id }}">{{ guide.first_name }} {{ guide.last_name }}</option>
+                        {% endfor %}
+
+                        <option value="None">Travel without guide</option>
+
+                    </select>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="row mb-2">
+                <div class="offset-9 col-3 text-right">
+                    <input type="submit" class="btn btn-success" value="Login">
+                </div>
+            </div>
+
+        </div>
+
+    </form>
 
 {% endblock %}
 

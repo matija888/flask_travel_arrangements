@@ -92,6 +92,7 @@
                 <th>End date</th>
                 <th>Description</th>
                 <th>Price</th>
+                <th>Travel guide</th>
                 {% if current_user.account_type in ['ADMIN', 'TRAVEL GUIDE'] %}
                 <th>Action (edit)</th>
                 <th>Action (cancel)</th>
@@ -102,20 +103,20 @@
             {% for arrangement in arrangements %}
             <tr>
                 <td>{{ arrangement.destination }}</td>
-                <td>{{ arrangement.start_date }}</td>
-                <td>{{ arrangement.end_date }}</td>
+                <td>{{ arrangement.start_date.strftime('%d.%m.%Y') }}</td>
+                <td>{{ arrangement.end_date.strftime('%d.%m.%Y') }}</td>
                 <td>{{ arrangement.description }}</td>
                 <td>{{ arrangement.price }}</td>
-                {% if current_user.account_type in ['ADMIN', 'TRAVEL GUIDE'] %}
-                    {% if (arrangement.start_date - current_date).days > 5 %}
-                    <td>
-                        <a href="{{ url_for('main.edit_arrangement', arrangement_id=arrangement.id) }}" class="btn btn-info">Edit</a>
-                    </td>
-                    {% else %}
-                    <td>
-                        Not editable
-                    </td>
-                    {% endif %}
+                <td>{{ arrangement.guide.first_name }} {{ arrangement.guide.last_name }}</td>
+
+                {% if (arrangement.start_date - current_date).days > 5 %}
+                <td>
+                    <a href="{{ url_for('main.edit_arrangement', arrangement_id=arrangement.id) }}" class="btn btn-info">Edit</a>
+                </td>
+                {% else %}
+                <td>
+                    Not editable
+                </td>
                 {% endif %}
 
                 {% if current_user.account_type in ['ADMIN'] %}

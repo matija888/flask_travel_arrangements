@@ -57,10 +57,28 @@ class TestApp(TestCase):
         self.assertTemplateUsed('auth/register.html')
         self.assertEqual(response.status_code, 200)
 
-    def test_register_user(self):
+    def test_register_admin(self):
         self.client.post('/auth/register', data=dict(
             first_name='Test', last_name='User', username='test_user', email='test@novelic.com', password='testing111',
             confirm_password='testing111', desired_account_type='ADMIN'
+        ))
+
+    def test_register_travel_guide(self):
+        self.client.post('/auth/register', data=dict(
+            first_name='Test', last_name='User', username='test_user', email='test@novelic.com', password='testing111',
+            confirm_password='testing111', desired_account_type='TRAVEL GUIDE'
+        ))
+
+    def test_register_two_travel_guides(self):
+        self.client.post('/auth/register', data=dict(
+            first_name='Travel', last_name='Guide 1', username='travel_guide_1',
+            email='test@novelic.com', password='testing111',
+            confirm_password='testing111', desired_account_type='TRAVEL GUIDE'
+        ))
+        self.client.post('/auth/register', data=dict(
+            first_name='Travel', last_name='Guide 2', username='travel_guide_2',
+            email='test@novelic.com', password='testing111',
+            confirm_password='testing111', desired_account_type='TRAVEL GUIDE'
         ))
 
     def test_register_user_with_incorrect_password_retyping(self):
@@ -74,7 +92,7 @@ class TestApp(TestCase):
         )
 
     def test_register_with_already_existing_username(self):
-        self.test_register_user()
+        self.test_register_admin()
         response = self.client.post('/auth/register', data=dict(
             first_name='Test', last_name='User', username='test_user', email='test@novelic.com', password='testing111',
             confirm_password='testing111', desired_account_type='TRAVEL GUIDE'
@@ -132,16 +150,24 @@ class TestApp(TestCase):
         with self.assertRaises(AttributeError):
             user.password
 
-    def test_approve_account_type_permission_request(self):
-        self.test_register_user()
+    def test_approve_admin_account_type(self):
+        self.test_register_admin()
         response = self.client.get('/manage_account_type_permission_request/1/approve')
         self.assertEqual(response.status_code, 200)
         self.assertMessageFlashed(
             'You have just approved request from Test User to give them ADMIN permissions.'
         )
 
+    def test_approve_travel_guide_account_type(self):
+        self.test_register_travel_guide()
+        response = self.client.get('/manage_account_type_permission_request/1/approve')
+        self.assertEqual(response.status_code, 200)
+        self.assertMessageFlashed(
+            'You have just approved request from Test User to give them TRAVEL GUIDE permissions.'
+        )
+
     def test_reject_account_type_permission_request(self):
-        self.test_register_user()
+        self.test_register_admin()
         response = self.client.get('/manage_account_type_permission_request/1/reject')
         self.assertEqual(response.status_code, 200)
         self.assertMessageFlashed(
@@ -149,7 +175,7 @@ class TestApp(TestCase):
         )
 
     def test_admin_login(self):
-        self.test_approve_account_type_permission_request()
+        self.test_approve_admin_account_type()
         self.test_login_page_post_recognized_user()
 
     def test_loading_user_edit_page(self):
@@ -157,7 +183,7 @@ class TestApp(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_edit_user_data_post_request(self):
-        self.test_register_user()
+        self.test_register_admin()
         response = self.client.post('/edit_user_data/1', data=dict(
             first_name='John', last_name='Doe', username='john_doe', email='john@doe.com',
             desired_account_type='TOURIST'
@@ -179,7 +205,7 @@ class TestApp(TestCase):
         response = self.client.get('/arrangements')
         self.assertEqual(response.status_code, 200)
 
-    def test_insert_new_travel_arrangement(self):
+    def test_insert_new_travel_arrangement_no_travel_guides_in_db(self):
         response = self.client.post('/arrangements', data=dict(
             destination='Spain', start_date='2021-11-01', end_date='2021-11-10', description='Autumn in Spain.',
             number_of_persons=2, price=580.00
@@ -191,14 +217,56 @@ class TestApp(TestCase):
         self.assertEqual(arrangement.end_date, date(2021, 11, 10))
         self.assertEqual(arrangement.number_of_persons, 2)
         self.assertEqual(arrangement.price, 580.00)
+        self.assertEqual(arrangement.travel_guide_id, None)
+
+    def test_insert_new_travel_arrangement_wo_travel_guide(self):
+        response = self.client.post('/arrangements', data=dict(
+            destination='Spain', start_date='2021-11-01', end_date='2021-11-10', description='Autumn in Spain.',
+            number_of_persons=2, price=580.00, travel_guide='None'
+        ))
+        self.assertEqual(response.status_code, 200)
+        arrangement = Arrangement.query.filter_by(description='Autumn in Spain.').first()
+        self.assertEqual(arrangement.id, 1)
+        self.assertEqual(arrangement.start_date, date(2021, 11, 1))
+        self.assertEqual(arrangement.end_date, date(2021, 11, 10))
+        self.assertEqual(arrangement.number_of_persons, 2)
+        self.assertEqual(arrangement.price, 580.00)
+        self.assertEqual(arrangement.travel_guide_id, None)
+
+    def test_insert_new_travel_arrangement_with_travel_guides(self):
+        self.test_approve_admin_account_type()
+        self.test_register_two_travel_guides()
+        # assign two users who are tourist by default, and want to be travel guides to be travel guides
+        tourists = User.query.filter_by(account_type='TOURIST').all()
+        self.assertEqual(len(tourists), 2)
+
+        tourists[0].account_type = 'TRAVEL GUIDE'
+        db.session.add(tourists[0])
+        db.session.commit()
+        tourists[1].account_type = 'TRAVEL GUIDE'
+        db.session.add(tourists[1])
+        db.session.commit()
+
+        response = self.client.post('/arrangements', data=dict(
+            destination='Spain', start_date='2021-11-01', end_date='2021-11-10', description='Autumn in Spain.',
+            number_of_persons=2, price=580.00, travel_guide_id=2
+        ))
+        self.assertEqual(response.status_code, 200)
+        arrangement = Arrangement.query.filter_by(description='Autumn in Spain.').first()
+        self.assertEqual(arrangement.id, 1)
+        self.assertEqual(arrangement.start_date, date(2021, 11, 1))
+        self.assertEqual(arrangement.end_date, date(2021, 11, 10))
+        self.assertEqual(arrangement.number_of_persons, 2)
+        self.assertEqual(arrangement.price, 580.00)
+        self.assertEqual(arrangement.travel_guide_id, 2)
 
     def test_edit_arrangement_page(self):
-        self.test_insert_new_travel_arrangement()
+        self.test_insert_new_travel_arrangement_no_travel_guides_in_db()
         response = self.client.get('/edit_arrangement/1')
         self.assertEqual(response.status_code, 200)
 
     def test_edit_travel_arrangement(self):
-        self.test_insert_new_travel_arrangement()
+        self.test_insert_new_travel_arrangement_no_travel_guides_in_db()
         response = self.client.post('/edit_arrangement/1', data=dict(
             destination='Spain', start_date='2021-11-05', end_date='2021-11-11', description='Tenerife',
             number_of_persons=3, price=1020.00
@@ -212,11 +280,36 @@ class TestApp(TestCase):
         self.assertEqual(arrangement.price, 1020.00)
 
     def test_cancel_arrangement(self):
-        self.test_insert_new_travel_arrangement()
+        self.test_insert_new_travel_arrangement_no_travel_guides_in_db()
         response = self.client.get('/cancel_arrangement/1')
         arrangement = Arrangement.query.filter_by(id=1).first()
         self.assertEqual(arrangement.status, 'inactive')
         self.assertEqual(response.status_code, 302)
+
+    def test_get_available_travel_guides_ids_method(self):
+        # insert two travel guides Travel Guide 1 and Travel Guide 2
+        # Assign Travel Gide 2 to the arrangement for period (2021-11-01 - 2021-11-10)
+        self.test_insert_new_travel_arrangement_with_travel_guides()
+        available_guides = User.get_available_travel_guides_ids('2021-10-01', '2021-10-15')
+        self.assertEqual(len(available_guides), 2)  # check if both travel guides are free
+        self.assertEqual(f'{available_guides[0].first_name} {available_guides[0].last_name}', 'Travel Guide 1')
+        self.assertEqual(f'{available_guides[1].first_name} {available_guides[1].last_name}', 'Travel Guide 2')
+
+        available_guides = User.get_available_travel_guides_ids('2021-10-01', '2021-11-15')
+        self.assertEqual(len(available_guides), 1)  # only one travel guide needs to be free
+        # that guide is Travel Guide 2
+        self.assertEqual(f'{available_guides[0].first_name} {available_guides[0].last_name}', 'Travel Guide 2')
+
+        # insert a new travel arrangement and assign that arrangement to the only available guide (Travel Guide 2 id=3)
+        self.client.post('/arrangements', data=dict(
+            destination='Russia', start_date='2021-10-30', end_date='2021-11-11', description='Russia travel desc.',
+            number_of_persons=2, price=1058.00, travel_guide_id=3
+        ))
+        available_guides = User.get_available_travel_guides_ids('2021-11-08', '2021-12-15')
+        self.assertEqual(len(available_guides), 0)  # there should be no available guide
+
+        available_guides = User.get_available_travel_guides_ids('2022-01-08', '2022-01-30')
+        self.assertEqual(len(available_guides), 2)  # there should be no available guide
 
 
 if __name__ == '__main__':

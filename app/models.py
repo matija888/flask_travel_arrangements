@@ -1,3 +1,5 @@
+import datetime
+
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from sqlalchemy import and_, or_
@@ -67,6 +69,42 @@ class User(db.Model, UserMixin):
             ]
         ]
 
+    @classmethod
+    def get_available_travel_guides_ids(cls, start_travel_date, end_travel_date):
+        """"
+            :param start_travel_date
+            :param end_travel_date
+            :return list of travel guides (User objects) which is available for assigning to arrangement
+            which will occur in the period between start_travel_date and end_travel_date
+        """
+        current_date = datetime.date.today()
+
+        # get ids of users who has assigned to a certain travel arrangement
+        # and period ot that arrangement is overlapping with period between start_travel_date and end_travel_date
+        non_available_assigned_guides_ids_tuples = cls.query.with_entities(cls.id)\
+            .join(Arrangement, User.id == Arrangement.travel_guide_id, isouter=True)\
+            .filter(
+                User.account_type == 'TRAVEL GUIDE',
+                Arrangement.travel_guide_id != None,
+                or_(
+                    and_(
+                        Arrangement.start_date > current_date,
+                        start_travel_date < Arrangement.end_date,
+                        end_travel_date > Arrangement.start_date
+                    )
+                )
+            ).all()
+        # convert those list of tuples to list of ids
+        non_available_assigned_guides_ids_list = [user_id for (user_id, ) in non_available_assigned_guides_ids_tuples]
+
+        all_guides = cls.query.filter_by(account_type='TRAVEL GUIDE').all()
+        available_guides = []
+        for guide in all_guides:
+            if guide.id not in non_available_assigned_guides_ids_list:
+                available_guides.append(guide)
+
+        return available_guides
+
 
 class Arrangement(db.Model):
     __tablename__ = 'arrangement'
@@ -78,3 +116,8 @@ class Arrangement(db.Model):
     number_of_persons = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Numeric(9, 2), nullable=False)
     status = db.Column(db.Enum('active', 'inactive', name='status'), nullable=True, default='active')
+    travel_guide_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    guide = db.relationship('User', foreign_keys=[travel_guide_id], backref='arrangement')
+
+
