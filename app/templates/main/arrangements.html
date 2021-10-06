@@ -3,6 +3,7 @@
 
 {% block stylesheets %}
     {{ super() }}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link href="{{ url_for('static', filename='css/bootstrap-datepicker3.min.css') }}" rel="stylesheet">
 {% endblock %}
 
@@ -24,12 +25,9 @@
         {% endif %}
     {% endwith %}
 
-    <h1>Travel arrangements:</h1>
-    <hr>
-
     {% if current_user.account_type == 'ADMIN' %}
     <h2>Insert a new travel arrangement</h2>
-    <form method="POST" class="container" action="{{ url_for('main.arrangements') }}">
+    <form method="POST" class="container" action="{{ url_for('main.insert_new_arrangement') }}">
 
         <div class="row mb-2">
             <div class="col-3">Destination:</div>
@@ -83,7 +81,41 @@
     <hr>
     {% endif %}
 
-    <h2>All travel arrangements</h2>
+    <form action="{{ url_for('main.arrangements') }}" method="GET" class="row">
+        <div class="col-4">
+            <h2>All travel arrangements</h2>
+        </div>
+        <div class="offset-4 col-4">
+            <div class="row">
+                <div class="col-8">
+                    <div class="row">
+                        <div class="col-2">
+                            Sort:
+                        </div>
+                        <div class="col-10">
+                            <select name="sort">
+                                {% for col_name in ['start_date', 'end_date', 'destination', 'description', 'price'] %}
+                                    {% for sort_order in ['asc', 'desc'] %}
+                                        <option value="{{ col_name }} {{ sort_order }}"
+                                        {% if columns_order == col_name + ' ' + sort_order %}
+                                            selected
+                                        {% endif %}
+                                        >
+                                            {{ col_name }} {{ sort_order }}ending
+                                        </option>
+                                    {% endfor %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-2">
+                    <button type="submit" class="btn btn-success">Sort</button>
+                </div>
+            </div>
+        </div>
+    </form>
     <table class="table table-striped">
         <thead>
             <tr>
@@ -96,6 +128,7 @@
                 {% if current_user.account_type in ['ADMIN', 'TRAVEL GUIDE'] %}
                 <th>Action (edit)</th>
                 <th>Action (cancel)</th>
+                <th>Action (delete)</th>
                 {% endif %}
             </tr>
         </thead>
@@ -109,30 +142,74 @@
                 <td>{{ arrangement.price }}</td>
                 <td>{{ arrangement.guide.first_name }} {{ arrangement.guide.last_name }}</td>
 
-                {% if (arrangement.start_date - current_date).days > 5 %}
-                <td>
-                    <a href="{{ url_for('main.edit_arrangement', arrangement_id=arrangement.id) }}" class="btn btn-info">Edit</a>
-                </td>
+                {% if arrangement.status == 'active' %}
+
+                    {% if (arrangement.start_date - current_date).days > 5 %}
+                        {% if current_user.account_type == 'ADMIN'
+                        or current_user.account_type == 'TRAVEL GUIDE' and current_user.id == arrangement.travel_guide_id %}
+                        <td>
+                            <a href="{{ url_for('main.edit_arrangement', arrangement_id=arrangement.id) }}" class="btn btn-info">Edit</a>
+                        </td>
+                        {% else %}
+                            <td>
+                                Not editable
+                            </td>
+                        {% endif %}
+                    {% else %}
+                        <td>
+                            Not editable
+                        </td>
+                    {% endif %}
+
+                {% endif %}
+
+                {% if arrangement.status != 'inactive' %}
+                    {% if current_user.account_type in ['ADMIN'] %}
+                        {% if (arrangement.start_date - current_date).days > 5 %}
+                        <td>
+                            <a href="{{ url_for('main.cancel_arrangement', arrangement_id=arrangement.id) }}"
+                               class="btn btn-warning">Cancel</a>
+                        </td>
+                        {% else %}
+                            <td>Too late to cancel</td>
+                        {% endif %}
+                    {% else %}
+                        <td>Do not have permission</td>
+                    {% endif %}
                 {% else %}
-                <td>
-                    Not editable
-                </td>
+                    <td>Canceled arrangement</td>
                 {% endif %}
 
                 {% if current_user.account_type in ['ADMIN'] %}
-                    {% if (arrangement.start_date - current_date).days > 5 %}
                     <td>
-                        <a href="{{ url_for('main.cancel_arrangement', arrangement_id=arrangement.id) }}" class="btn btn-danger">Cancel</a>
+                        <a href="{{ url_for('main.delete_arrangement', arrangement_id=arrangement.id) }}" class="btn btn-danger">Delete</a>
                     </td>
-                    {% else %}
-                        <td>Too late to cancel</td>
-                    {% endif %}
                 {% else %}
                     <td>Do not have permission</td>
                 {% endif %}
             </tr>
             {% endfor %}
         </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3">Showed {{ item_per_page }} item per page.</td>
+                <td colspan="6">
+                    <span class="pull-right">Page {{ page }}</span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    {% if has_prev and prev_url %}
+                    <a href="{{ prev_url }}"><< Previous page </a>
+                    {% endif %}
+                </td>
+                <td colspan="8">
+                    {% if has_next and next_url %}
+                    <a href="{{ next_url }}" class="pull-right">Next page >></a>
+                    {% endif %}
+                </td>
+            </tr>
+        </tfoot>
     </table>
 
 {% endblock %}

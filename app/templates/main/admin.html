@@ -27,6 +27,82 @@
 
     Welcome {{ current_user.username }}
     <hr>
+    <form action="{{ url_for('main.search_users') }}" method="GET" class="row">
+        <div class="col-4">
+            <h2>All users</h2>
+        </div>
+        <div class="offset-4 col-4">
+            <div class="row">
+                <div class="col-8">
+                    <input type="text" placeholder="Search by account type..." name="account_type" class="form-control">
+                </div>
+                <div class="col-2">
+                    <button type="submit" class="btn btn-success"><i class="fa fa-search">Search</i></button>
+                </div>
+            </div>
+        </div>
+    </form>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>User id</th>
+                <th>First name</th>
+                <th>Last name</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Account type</th>
+                <th>Arrangements</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.first_name }}</td>
+                <td>{{ user.last_name }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.account_type }}</td>
+                {% if user.account_type == 'TRAVEL GUIDE' %}
+                <td>
+                    <a href="{{ url_for('main.travel_guide_arrangements', guide_id=user.id) }}">
+                        Travel guide's arrangements
+                    </a>
+                </td>
+                {% elif user.account_type == 'TOURIST' %}
+                <td>
+                    <a href="{{ url_for('main.tourist_reservations', tourist_id=user.id) }}">
+                        Tourist reservations
+                    </a>
+                </td>
+                {% else %}
+                    <td></td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+            <tfoot>
+                <tr>
+                    <td colspan="3">Showed {{ item_per_page }} item per page.</td>
+                    <td colspan="4">
+                        <span class="pull-right">Page {{ page }}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        {% if has_prev and prev_url %}
+                        <a href="{{ prev_url }}"><< Previous page </a>
+                        {% endif %}
+                    </td>
+                    <td colspan="6">
+                        {% if has_next and next_url %}
+                        <a href="{{ next_url }}" class="pull-right">Next page >></a>
+                        {% endif %}
+                    </td>
+                </tr>
+            </tfoot>
+        </tbody>
+    </table>
+    <hr>
     <h3>Pending requests for upgrading account type permissions</h3>
     <div class="row">
         <div class="col-7">

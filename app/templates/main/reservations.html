@@ -3,6 +3,8 @@
 
 {% block stylesheets %}
     {{ super() }}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="{{ url_for('static', filename='css/bootstrap-datepicker3.min.css') }}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -49,9 +51,57 @@
             </tr>
             {% endfor %}
         </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3">Showed {{ item_per_page }} item per page.</td>
+                <td colspan="4">
+                    <span class="pull-right">Page {{ reservations_page }}</span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    {% if reservations_has_prev and reservations_prev_url %}
+                    <a href="{{ reservations_prev_url }}"><< Previous page </a>
+                    {% endif %}
+                </td>
+                <td colspan="6">
+                    {% if reservations_has_next and reservations_next_url %}
+                    <a href="{{ reservations_next_url }}" class="pull-right">Next page >></a>
+                    {% endif %}
+                </td>
+            </tr>
+        </tfoot>
     </table>
 
-    <h2>All travel arrangements</h2>
+    <br>
+    <hr>
+
+    <form action="{{ url_for('main.reservations') }}" method="GET" class="row">
+        <div class="col-4">
+            <h2>All travel arrangements</h2>
+        </div>
+        <div class="col-4">
+            <div class="row">
+                <div class="col-6">
+                    <input type="text" name="start_date" class="form-control input-date" placeholder="Start date">
+                </div>
+                <div class="col-6">
+                    <input type="text" name="end_date" class="form-control input-date" placeholder="End date">
+                </div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="row">
+                <div class="col-8">
+                <input type="text" placeholder="Destination..." name="destination" class="form-control">
+                </div>
+                <div class="col-2">
+                    <button type="submit" class="btn btn-success"><i class="fa fa-search">Search</i></button>
+                </div>
+            </div>
+        </div>
+    </form>
+
     <table class="table table-striped">
         <thead>
             <tr>
@@ -79,6 +129,43 @@
             </tr>
             {% endfor %}
         </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3">Showed {{ item_per_page }} item per page.</td>
+                <td colspan="4">
+                    <span class="pull-right">Page {{ arrangements_page }}</span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    {% if arrangements_has_prev and arrangements_prev_url %}
+                    <a href="{{ arrangements_prev_url }}"><< Previous page </a>
+                    {% endif %}
+                </td>
+                <td colspan="6">
+                    {% if arrangements_has_next and arrangements_next_url %}
+                    <a href="{{ arrangements_next_url }}" class="pull-right">Next page >></a>
+                    {% endif %}
+                </td>
+            </tr>
+        </tfoot>
     </table>
 
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/bootstrap-datepicker.min.js') }}"></script>
+    <script>
+        $('.input-date').datepicker({
+            format: "dd.mm.yyyy",
+            weekStart: 1,
+            todayBtn: "linked",
+            clearBtn: true,
+            orientation: "bottom",
+            daysOfWeekHighlighted: "0,6",
+            autoclose: true,
+            todayHighlight: true
+        });
+    </script>
 {% endblock %}

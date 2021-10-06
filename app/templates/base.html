@@ -35,7 +35,13 @@
 
         {% if current_user.account_type in ['ADMIN', 'TRAVEL GUIDE'] %}
         <li class="nav-item">
-            <a href="{{ url_for('main.arrangements') }}">Arrangements</a>
+            <a href="{{ url_for('main.arrangements') }}">All Arrangements</a>
+        </li>
+        {% endif %}
+
+        {% if current_user.account_type in ['TRAVEL GUIDE'] %}
+        <li class="nav-item">
+            <a href="{{ url_for('main.travel_guide_arrangements', guide_id=current_user.id) }}">My arrangements</a>
         </li>
         {% endif %}
 

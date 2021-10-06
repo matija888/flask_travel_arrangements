@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Travel guide's arrangements {% endblock %}
+
+{% block stylesheets %}
+    {{ super() }}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="{{ url_for('static', filename='css/bootstrap-datepicker3.min.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'error' %}
+                    <div class="alert alert-danger">
+                        {{ message|safe }}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        {{ message|safe }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if current_user.account_type == 'ADMIN' %}
+        <h2>Travel guide's arrangements</h2>
+    {% else %}
+        <h2>My arrangements</h2>
+    {% endif %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Destination</th>
+                <th>Start date</th>
+                <th>End date</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Travel guide</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for arrangement in travel_arrangements %}
+            <tr>
+                <td>{{ arrangement.destination }}</td>
+                <td>{{ arrangement.start_date.strftime('%d.%m.%Y') }}</td>
+                <td>{{ arrangement.end_date.strftime('%d.%m.%Y') }}</td>
+                <td>{{ arrangement.description }}</td>
+                <td>{{ arrangement.price }}</td>
+                <td>{{ arrangement.guide.first_name }} {{ arrangement.guide.last_name }}</td>
+            </tr>
+            {% endfor %}
+            <tfoot>
+                <tr>
+                    <td colspan="3">Showed {{ item_per_page }} item per page.</td>
+                    <td colspan="4">
+                        <span class="pull-right">Page {{ page }}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        {% if has_prev and prev_url %}
+                        <a href="{{ prev_url }}"><< Previous page </a>
+                        {% endif %}
+                    </td>
+                    <td colspan="6">
+                        {% if has_next and next_url %}
+                        <a href="{{ next_url }}" class="pull-right">Next page >></a>
+                        {% endif %}
+                    </td>
+                </tr>
+            </tfoot>
+        </tbody>
+    </table>
+
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/bootstrap-datepicker.min.js') }}"></script>
+    <script>
+        $('.input-date').datepicker({
+            format: "dd.mm.yyyy",
+            weekStart: 1,
+            todayBtn: "linked",
+            clearBtn: true,
+            orientation: "bottom",
+            daysOfWeekHighlighted: "0,6",
+            autoclose: true,
+            todayHighlight: true
+        });
+    </script>
+{% endblock %}

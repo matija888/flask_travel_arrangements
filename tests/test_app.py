@@ -1,5 +1,6 @@
 import os
 import unittest
+from unittest.mock import MagicMock
 from datetime import date
 
 from flask_testing import TestCase
@@ -206,11 +207,11 @@ class TestApp(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_insert_new_travel_arrangement_no_travel_guides_in_db(self):
-        response = self.client.post('/arrangements', data=dict(
+        response = self.client.post('/insert_new_arrangement', data=dict(
             destination='Spain', start_date='2021-11-01', end_date='2021-11-10', description='Autumn in Spain.',
             number_of_persons=2, price=580.00
         ))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
         arrangement = Arrangement.query.filter_by(description='Autumn in Spain.').first()
         self.assertEqual(arrangement.id, 1)
         self.assertEqual(arrangement.start_date, date(2021, 11, 1))
@@ -220,11 +221,11 @@ class TestApp(TestCase):
         self.assertEqual(arrangement.travel_guide_id, None)
 
     def test_insert_new_travel_arrangement_wo_travel_guide(self):
-        response = self.client.post('/arrangements', data=dict(
+        response = self.client.post('/insert_new_arrangement', data=dict(
             destination='Spain', start_date='2021-11-01', end_date='2021-11-10', description='Autumn in Spain.',
             number_of_persons=2, price=580.00, travel_guide='None'
         ))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
         arrangement = Arrangement.query.filter_by(description='Autumn in Spain.').first()
         self.assertEqual(arrangement.id, 1)
         self.assertEqual(arrangement.start_date, date(2021, 11, 1))
@@ -247,7 +248,7 @@ class TestApp(TestCase):
         db.session.add(tourists[1])
         db.session.commit()
 
-        response = self.client.post('/arrangements', data=dict(
+        response = self.client.post('/insert_new_arrangement', data=dict(
             destination='Spain', start_date='2021-11-01', end_date='2021-11-10', description='Autumn in Spain.',
             number_of_persons=4, price=580.00, travel_guide_id=2
         ))
@@ -259,7 +260,7 @@ class TestApp(TestCase):
         db.session.add(arrangement)
         db.session.commit()
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
         arrangement = Arrangement.query.filter_by(description='Autumn in Spain.').first()
         self.assertEqual(arrangement.id, 1)
         self.assertEqual(arrangement.start_date, date(2021, 11, 1))
@@ -308,7 +309,7 @@ class TestApp(TestCase):
         self.assertEqual(f'{available_guides[0].first_name} {available_guides[0].last_name}', 'Travel Guide 2')
 
         # insert a new travel arrangement and assign that arrangement to the only available guide (Travel Guide 2 id=3)
-        self.client.post('/arrangements', data=dict(
+        self.client.post('/insert_new_arrangement', data=dict(
             destination='Russia', start_date='2021-10-30', end_date='2021-11-11', description='Russia travel desc.',
             number_of_persons=2, price=1058.00
         ))
@@ -325,9 +326,30 @@ class TestApp(TestCase):
         available_guides = User.get_available_travel_guides_ids('2022-01-08', '2022-01-30')
         self.assertEqual(len(available_guides), 2)  # there should be no available guide
 
-    def test_reservations_page(self):
+    @unittest.mock.patch('flask_login.utils._get_user')
+    def test_reservations_page(self, current_user):
+        mock_user = MagicMock()
+        mock_user.id = 1
+        # assign mock_user to be current_user in testing environment
+        current_user.return_value = mock_user
         response = self.client.get('/reservations')
         self.assertEqual(response.status_code, 200)
+
+    def test_create_reservation_page(self):
+        self.test_insert_new_travel_arrangement_with_travel_guides()
+        response = self.client.get('/create_reservation/1')
+        self.assertEqual(response.status_code, 200)
+
+    def test_create_new_reservation_with_more_person_than_defined_in_arrangement(self):
+        self.client.post('/insert_new_arrangement', data=dict(
+            destination='Serbia', start_date='2022-08-01', end_date='2022-09-10', description='Serbia summer.',
+            number_of_persons=2, price=280.00
+        ))
+        response = self.client.post('/create_reservation/1', data=dict(number_of_persons=3))
+        self.assertEqual(response.status_code, 302)
+        self.assertMessageFlashed(
+            'You cannot book reservation with number of persons greater than arrangement number of persons.'
+        )
 
     def test_create_new_reservation(self):
         self.test_insert_new_travel_arrangement_with_travel_guides()
@@ -341,8 +363,48 @@ class TestApp(TestCase):
 
     def test_all_unbooked_arrangements(self):
         self.test_create_new_reservation()
+        # test method without passing any parameter
         unbooked_arrangements = Arrangement.get_all_unbooked_arrangements()
-        self.assertEqual(len(unbooked_arrangements), 0)
+        self.assertEqual(len(unbooked_arrangements.items), 0)
+        # insert one more arrangement for Spain
+        self.client.post('/insert_new_arrangement', data=dict(
+            destination='Spain 2', start_date='2022-08-01', end_date='2022-09-10', description='Spain summer.',
+            number_of_persons=2, price=1080.00
+        ))
+        # test method with passing only destination='Spain'
+        unbooked_arrangements = Arrangement.get_all_unbooked_arrangements(destination='Spain')
+        self.assertEqual(len(unbooked_arrangements.items), 1)
+
+        # test method with passing only destination='Sp'
+        unbooked_arrangements = Arrangement.get_all_unbooked_arrangements(destination='Spain')
+        self.assertEqual(len(unbooked_arrangements.items), 1)
+
+        # test method with passing destination='Spain' and defined start and end date
+        unbooked_arrangements = Arrangement.get_all_unbooked_arrangements(
+            destination='Spain', start_date='2021-01-01', end_date='2021-02-01'
+        )
+        self.assertEqual(len(unbooked_arrangements.items), 0)
+
+        # test method with passing start and end date without destination
+        unbooked_arrangements = Arrangement.get_all_unbooked_arrangements(
+            start_date='2021-08-15', end_date='2022-08-25'
+        )
+        self.assertEqual(len(unbooked_arrangements.items), 1)
+
+    def test_search_users(self):
+        response = self.client.get('/search_users?account_type=TOURIST')
+        self.assertEqual(response.status_code, 200)
+
+    def test_travel_guide_arrangements(self):
+        response = self.client.get('/travel_guide_arrangements/1?page=1')
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed('main/travel_guide_arrangements.html')
+
+    def test_tourist_reservations(self):
+        response = self.client.get('/tourist_reservations/1')
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed('main/tourist_reservations.html')
+
 
 if __name__ == '__main__':
     unittest.main()

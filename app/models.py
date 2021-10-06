@@ -3,8 +3,9 @@ from decimal import Decimal
 import datetime
 
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin, current_user
-from sqlalchemy import and_, or_
+from flask_login import UserMixin
+from flask import request, current_app
+from sqlalchemy import and_, or_, text
 
 from app import db, login_manager
 
@@ -12,6 +13,9 @@ from app import db, login_manager
 @login_manager.user_loader
 def get_user(user_id):
     return User.query.get(int(user_id))
+
+
+ITEM_PER_PAGE = 5
 
 
 class User(db.Model, UserMixin):
@@ -133,9 +137,20 @@ class User(db.Model, UserMixin):
 
         return available_guides
 
+    @classmethod
+    def get_all_users(cls, **kwargs):
+        account_type = kwargs.pop('account_type', '')
+        page = kwargs.pop('page', '')
+        page = 1 if not page else page
+        if account_type:
+            return cls.query.filter_by(account_type=account_type).paginate(page, ITEM_PER_PAGE, False)
+        else:
+            return cls.query.paginate(page, ITEM_PER_PAGE, False)
+
 
 class Arrangement(db.Model):
     __tablename__ = 'arrangement'
+    __searchable__ = ['description', 'destination']
     id = db.Column(db.Integer, primary_key=True)
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
@@ -149,12 +164,119 @@ class Arrangement(db.Model):
     guide = db.relationship('User', foreign_keys=[travel_guide_id], backref='arrangement')
 
     @classmethod
-    def get_all_unbooked_arrangements(cls):
+    def get_all_unbooked_arrangements(cls, **kwargs):
+        page = kwargs.pop('page', '')
+        page = 1 if not page else page
+        destination = kwargs.pop('destination', '')
+        start_date = kwargs.pop('start_date', '')
+        end_date = kwargs.pop('end_date', '')
+        # Set the pagination configuration
         five_days_after_today = date.today() + timedelta(days=5)
-        return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
-            Reservation.user_id == None,
-            Arrangement.start_date > five_days_after_today
-        ).order_by(Arrangement.start_date).all()
+        if destination and start_date and end_date:
+            return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
+                Reservation.user_id == None,
+                cls.status == 'active',
+                Arrangement.start_date >= five_days_after_today
+            ).filter(cls.destination.ilike(f'%{destination}%'))\
+                .filter(
+                    or_(
+                        and_(
+                            start_date <= Arrangement.end_date,
+                            start_date >= Arrangement.start_date,
+                            end_date >= Arrangement.start_date,
+                            end_date >= Arrangement.end_date
+                        ),
+                        and_(
+                            start_date <= Arrangement.start_date,
+                            start_date <= Arrangement.end_date,
+                            end_date >= Arrangement.start_date,
+                            end_date <= Arrangement.end_date
+                        ),
+                        and_(
+                            start_date <= Arrangement.start_date,
+                            start_date <= Arrangement.end_date,
+                            end_date >= Arrangement.start_date,
+                            end_date >= Arrangement.end_date,
+                        ),
+                        and_(
+                            start_date >= Arrangement.start_date,
+                            start_date <= Arrangement.end_date,
+                            end_date >= Arrangement.start_date,
+                            end_date <= Arrangement.end_date,
+                        )
+                    )
+                ).order_by(Arrangement.start_date)\
+                .paginate(page, ITEM_PER_PAGE, False)
+        elif destination:
+            return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
+                Reservation.user_id == None,
+                cls.status == 'active',
+                Arrangement.start_date > five_days_after_today
+            ).filter(cls.destination.ilike(f'%{destination}%')) \
+                .order_by(Arrangement.start_date) \
+                .paginate(page, ITEM_PER_PAGE, False)
+        elif start_date and end_date:
+            return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
+                Reservation.user_id == None,
+                cls.status == 'active',
+                Arrangement.start_date >= five_days_after_today
+            ).filter(
+                or_(
+                    and_(
+                        start_date <= Arrangement.end_date,
+                        start_date >= Arrangement.start_date,
+                        end_date >= Arrangement.start_date,
+                        end_date >= Arrangement.end_date
+                    ),
+                    and_(
+                        start_date <= Arrangement.start_date,
+                        start_date <= Arrangement.end_date,
+                        end_date >= Arrangement.start_date,
+                        end_date <= Arrangement.end_date
+                    ),
+                    and_(
+                        start_date <= Arrangement.start_date,
+                        start_date <= Arrangement.end_date,
+                        end_date >= Arrangement.start_date,
+                        end_date >= Arrangement.end_date,
+                    ),
+                    and_(
+                        start_date >= Arrangement.start_date,
+                        start_date <= Arrangement.end_date,
+                        end_date >= Arrangement.start_date,
+                        end_date <= Arrangement.end_date,
+                    )
+                )
+            ).order_by(Arrangement.start_date) \
+                .paginate(page, ITEM_PER_PAGE, False)
+        else:
+            return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
+                Reservation.user_id == None,
+                cls.status == 'active',
+                Arrangement.start_date > five_days_after_today
+            ).order_by(Arrangement.start_date).paginate(page, ITEM_PER_PAGE, False)
+
+    @classmethod
+    def get_travel_guide_arrangements(cls, guide_id, **kwargs):
+        page = kwargs.pop('page', '')
+        page = 1 if not page else page
+        columns_order = kwargs.pop('columns_order') if 'columns_order' in kwargs else None
+        if columns_order:
+            return cls.query.filter_by(travel_guide_id=guide_id).order_by(text(columns_order)) \
+                .paginate(page, ITEM_PER_PAGE, False)
+        else:
+            return cls.query.filter_by(travel_guide_id=guide_id).paginate(page, ITEM_PER_PAGE, False)
+
+    @classmethod
+    def get_all_travel_arrangements(cls, **kwargs):
+        page = kwargs.pop('page', '')
+        page = 1 if not page else page
+        columns_order = kwargs.pop('columns_order') if 'columns_order' in kwargs else None
+        if columns_order:
+            return cls.query.order_by(text(columns_order)).paginate(page, ITEM_PER_PAGE, False)
+        else:
+            # sort by start_date ASC by default
+            return cls.query.order_by(cls.start_date).paginate(page, ITEM_PER_PAGE, False)
 
 
 class Reservation(db.Model):
@@ -189,6 +311,13 @@ class Reservation(db.Model):
         return reservation
 
     @classmethod
-    def get_all_my_reservations(cls):
-        return cls.query.filter_by()
+    def get_all_reservations(cls):
+        return cls.query.all()
+
+    @classmethod
+    def get_tourist_reservations(cls, tourist_id, **kwargs):
+        page = kwargs.pop('page', '')
+        page = 1 if not page else page
+        return cls.query.join(Arrangement)\
+            .filter(Arrangement.status == 'active', cls.user_id == tourist_id).paginate(page, ITEM_PER_PAGE, False)
 

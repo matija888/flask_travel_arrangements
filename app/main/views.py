@@ -1,10 +1,10 @@
-from datetime import date, timedelta
+from datetime import date
 
-from flask import render_template, flash, request, redirect, url_for
+from flask import render_template, flash, request, redirect, url_for, current_app
 from flask_login import login_required, current_user
 
 from . import main
-from app.models import User, Arrangement, Reservation
+from app.models import User, Arrangement, Reservation, ITEM_PER_PAGE
 from app import db
 from app.decorators import requires_account_types
 
@@ -19,7 +19,22 @@ def index():
 @login_required
 @requires_account_types('ADMIN')
 def admin_panel():
-    return render_template('main/admin.html')
+    page = request.args.get('page', 1, type=int)
+
+    users = User.get_all_users(page=page)
+    has_next = users.has_next
+    has_prev = users.has_prev
+    next_url = users.next_num if has_next else None
+    prev_url = users.prev_num if has_prev else None
+
+    return render_template(
+        'main/admin.html',
+        next_url=url_for('main.admin_panel', page=next_url),
+        prev_url=url_for('main.admin_panel', page=prev_url),
+        has_next=has_next, has_prev=has_prev,
+        users=users.items, item_per_page=5,
+        page=page
+    )
 
 
 @main.route('/manage_account_type_permission_request/<user_id>/<action>')
@@ -54,7 +69,8 @@ def edit_user_data(user_id):
         user.last_name = form['last_name']
         user.username = form['username']
         user.email = form['email']
-        user.desired_account_type = form['desired_account_type']
+        if 'desired_account_type' in form:
+            user.desired_account_type = form['desired_account_type']
         user.confirmed_desired_account_type = 'pending'
         db.session.add(user)
         db.session.commit()
@@ -62,12 +78,10 @@ def edit_user_data(user_id):
     return render_template('main/edit_user_data.html', user=user)
 
 
-@main.route('/arrangements', methods=['GET', 'POST'])
-@login_required
-@requires_account_types('ADMIN', 'TRAVEL GUIDE')
-def arrangements():
-    form = request.form
+@main.route('/insert_new_arrangement', methods=['POST'])
+def insert_new_arrangement():
     if request.method == 'POST':
+        form = request.form
         arrangement = Arrangement(
             destination=form['destination'], start_date=form['start_date'], end_date=form['end_date'],
             description=form['description'], number_of_persons=form['number_of_persons'], price=form['price']
@@ -75,8 +89,29 @@ def arrangements():
         db.session.add(arrangement)
         db.session.commit()
         flash('You have successfully inserted a new travel arrangement.')
-    arrangements = Arrangement.query.order_by(Arrangement.start_date).all()
-    return render_template('main/arrangements.html', arrangements=arrangements, current_date=date.today())
+    return redirect(url_for('main.arrangements'))
+
+
+@main.route('/arrangements', methods=['GET'])
+@login_required
+@requires_account_types('ADMIN', 'TRAVEL GUIDE')
+def arrangements():
+    page = request.args.get('page', 1, type=int)
+    columns_order = request.args.get('sort')
+    arrangements = Arrangement.get_all_travel_arrangements(page=page, columns_order=columns_order)
+    has_next = arrangements.has_next
+    has_prev = arrangements.has_prev
+    next_url = arrangements.next_num if has_next else None
+    prev_url = arrangements.prev_num if has_prev else None
+
+    return render_template(
+        'main/arrangements.html', current_date=date.today(),
+        arrangements=arrangements.items,
+        next_url=url_for('main.arrangements', page=next_url, columns_order='start_date asc'),
+        prev_url=url_for('main.arrangements', page=prev_url, columns_order='start_date asc'),
+        has_next=has_next, has_prev=has_prev, item_per_page=5,
+        page=page, columns_order=columns_order
+    )
 
 
 @main.route('/edit_arrangement/<arrangement_id>', methods=['GET', 'POST'])
@@ -117,12 +152,55 @@ def cancel_arrangement(arrangement_id):
     return redirect(url_for('main.arrangements'))
 
 
+@main.route('/delete_arrangement/<arrangement_id>')
+@login_required
+@requires_account_types('ADMIN')
+def delete_arrangement(arrangement_id):
+    arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
+    reservation = Reservation.query.filter_by(arrangement_id=arrangement.id).first()
+    db.session.delete(reservation)
+    db.session.delete(arrangement)
+    db.session.commit()
+    return redirect(url_for('main.arrangements'))
+
+
 @main.route('/reservations')
 @login_required
 def reservations():
-    arrangements = Arrangement.get_all_unbooked_arrangements()
-    reservations = Reservation.get_all_my_reservations()
-    return render_template('main/reservations.html', arrangements=arrangements, reservations=reservations)
+    destination = request.args.get('destination')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    arrangements_page = request.args.get('arrangements_page', 1, type=int)
+    arrangements = Arrangement.get_all_unbooked_arrangements(
+        page=arrangements_page, destination=destination, start_date=start_date, end_date=end_date
+    )
+    arrangements_next_url = arrangements.next_num if arrangements.has_next else None
+    arrangements_prev_url = arrangements.prev_num if arrangements.has_prev else None
+
+    reservations_page = request.args.get('reservations_page', 1, type=int)
+    reservations = Reservation.get_tourist_reservations(current_user.id, page=reservations_page)
+    reservations_next_url = reservations.next_num if reservations.has_next else None
+    reservations_prev_url = reservations.prev_num if reservations.has_prev else None
+
+    return render_template(
+        'main/reservations.html',
+        arrangements=arrangements.items,
+        reservations=reservations.items,
+
+        arrangements_next_url=url_for('main.reservations', arrangements_page=arrangements_next_url),
+        arrangements_prev_url=url_for('main.reservations', arrangements_page=arrangements_prev_url),
+
+        reservations_next_url=url_for('main.reservations', reservations_page=reservations_next_url),
+        reservations_prev_url=url_for('main.reservations', reservations_page=reservations_prev_url),
+
+        arrangements_has_next=arrangements.has_next, arrangements_has_prev=arrangements.has_prev,
+        reservations_has_next=reservations.has_next, reservations_has_prev=reservations.has_prev,
+
+        item_per_page=ITEM_PER_PAGE,
+        arrangements_page=arrangements_page,
+        reservations_page=reservations_page
+    )
 
 
 @main.route('/create_reservation/<arrangement_id>', methods=['GET', 'POST'])
@@ -133,7 +211,7 @@ def create_reservation(arrangement_id):
         arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
         if number_of_persons > arrangement.number_of_persons:
             flash('You cannot book reservation with number of persons greater than arrangement number of persons.')
-            return redirect(url_for('main.create_reservation'))
+            return redirect(url_for('main.create_reservation', arrangement_id=arrangement_id))
         else:
             Reservation.create_reservation(arrangement, current_user.id, number_of_persons)
             flash(f'You have successfully created reservation for {arrangement.description}')
@@ -141,3 +219,45 @@ def create_reservation(arrangement_id):
     else:
         arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
         return render_template('main/create_reservation.html', arrangement=arrangement)
+
+
+@main.route('/search_users', methods=['GET'])
+def search_users():
+    account_type = request.args.get('account_type').upper()
+    for account in ['TOURIST', 'TRAVEL GUIDE', 'ADMIN']:
+        if account_type in account:
+            account_type = account
+            break
+    page = request.args.get('page', 1, type=int)
+    users = User.get_all_users(page=page, account_type=account_type)
+    has_next = users.has_next
+    has_prev = users.has_prev
+    next_url = users.next_num if has_next else None
+    prev_url = users.prev_num if has_prev else None
+
+    return render_template(
+        'main/admin.html',
+        next_url=url_for('main.admin_panel', page=next_url),
+        prev_url=url_for('main.admin_panel', page=prev_url),
+        has_next=has_next, has_prev=has_prev,
+        users=users.items, item_per_page=ITEM_PER_PAGE,
+        page=page
+    )
+
+
+@main.route('/travel_guide_arrangements/<guide_id>')
+def travel_guide_arrangements(guide_id):
+    page = request.args.get('page', 1, type=int)
+    travel_arrangements = Arrangement.get_travel_guide_arrangements(guide_id, page=page)
+    return render_template(
+        'main/travel_guide_arrangements.html', travel_arrangements=travel_arrangements.items
+    )
+
+
+@main.route('/tourist_reservations/<tourist_id>')
+def tourist_reservations(tourist_id):
+    page = request.args.get('page', 1, type=int)
+    tourist_reservations = Reservation.get_tourist_reservations(tourist_id, page=page)
+    return render_template(
+        'main/tourist_reservations.html', tourist_reservations=tourist_reservations.items
+    )
