@@ -10,8 +10,9 @@ from app.decorators import requires_account_types
 
 
 @main.route('/')
-@login_required
 def index():
+    if not current_user.is_authenticated:
+        return redirect(url_for('auth.login'))
     return render_template('main/me.html')
 
 
@@ -90,6 +91,8 @@ def edit_user_data(user_id):
 
 
 @main.route('/insert_new_arrangement', methods=['POST'])
+@login_required
+@requires_account_types('ADMIN')
 def insert_new_arrangement():
     if request.method == 'POST':
         form = request.form
@@ -104,8 +107,6 @@ def insert_new_arrangement():
 
 
 @main.route('/arrangements', methods=['GET'])
-@login_required
-@requires_account_types('ADMIN', 'TRAVEL GUIDE')
 def arrangements():
     page = request.args.get('page', 1, type=int)
     columns_order = request.args.get('sort')
@@ -115,8 +116,13 @@ def arrangements():
     next_url = arrangements.next_num if has_next else None
     prev_url = arrangements.prev_num if has_prev else None
 
+    if current_user.is_authenticated:
+        template = 'main/arrangements.html'
+    else:
+        template = 'main/non_registered_user_page.html'
+
     return render_template(
-        'main/arrangements.html', current_date=date.today(),
+        template, current_date=date.today(),
         arrangements=arrangements.items,
         next_url=url_for('main.arrangements', page=next_url, columns_order='start_date asc'),
         prev_url=url_for('main.arrangements', page=prev_url, columns_order='start_date asc'),
@@ -215,6 +221,7 @@ def reservations():
 
 
 @main.route('/create_reservation/<arrangement_id>', methods=['GET', 'POST'])
+@login_required
 def create_reservation(arrangement_id):
     if request.method == 'POST':
         form = request.form
@@ -233,6 +240,7 @@ def create_reservation(arrangement_id):
 
 
 @main.route('/travel_guide_arrangements/<guide_id>')
+@login_required
 def travel_guide_arrangements(guide_id):
     page = request.args.get('page', 1, type=int)
     travel_arrangements = Arrangement.get_travel_guide_arrangements(guide_id, page=page)
@@ -242,9 +250,17 @@ def travel_guide_arrangements(guide_id):
 
 
 @main.route('/tourist_reservations/<tourist_id>')
+@login_required
 def tourist_reservations(tourist_id):
     page = request.args.get('page', 1, type=int)
     tourist_reservations = Reservation.get_tourist_reservations(tourist_id, page=page)
     return render_template(
         'main/tourist_reservations.html', tourist_reservations=tourist_reservations.items
     )
+
+
+@main.route('/non_registered_user_page')
+@login_required
+def non_registered_user_page():
+    arrangements = Arrangement.get_all_travel_arrangements()
+    return render_template('main/non_registered_user_page.html', arrangements=arrangements)

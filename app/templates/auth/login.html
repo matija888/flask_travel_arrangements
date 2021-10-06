@@ -35,6 +35,12 @@
             {% endif %}
         {% endwith %}
 
+        <p class="alert alert-info">
+            Welcome. This is travel arrangements app.
+            If you want to see our travel arrangements click
+            <a href="{{ url_for('main.arrangements') }}">here</a>
+        </p>
+
         <form method="POST" enctype="multipart/form-data" class="row">
 
             <div class="offset-3 col-6">
@@ -75,8 +81,6 @@
                         <input type="submit" class="btn btn-success" value="Login">
                     </div>
                 </div>
-                </div>
-
             </div>
 
         </form>

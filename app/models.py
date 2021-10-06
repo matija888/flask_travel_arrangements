@@ -36,8 +36,6 @@ class User(db.Model, UserMixin):
         db.Enum('approve', 'reject', 'pending', name='confirmed_desired_account_type'), nullable=True
     )
 
-    # travel_guide = db.relationship('Arrangement', foreign_keys='Arrangement.travel_guide_id')
-
     @property
     def password(self):
         raise AttributeError('Password is not a readable attribute')

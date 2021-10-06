@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+        <meta charset="utf-8">
+        <meta name="description" content="">
+        <meta name="author" content="Matija Lukic">
+        <title>Travel Arrangements</title>
+
+        {% block stylesheets %}
+            <link href="{{ url_for('static', filename='css/bootstrap.css') }}" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+            <link href="{{ url_for('static', filename='css/bootstrap-datepicker3.min.css') }}" rel="stylesheet">
+        {% endblock %}
+    {% endblock %}
+</head>
+
+<body>
+    <div class="container" style="margin-top: 100px;">
+    <p class="alert alert-success">
+            If you want to see all details for travel arrangements and to travel with us
+            <a href="{{ url_for('auth.register') }}">register here</a>
+        </p>
+        <form action="{{ url_for('main.arrangements') }}" method="GET" class="row">
+            <div class="col-4">
+                <h2>All travel arrangements</h2>
+            </div>
+            <div class="offset-4 col-4">
+                <div class="row">
+                    <div class="col-8">
+                        <div class="row">
+                            <div class="col-2">
+                                Sort:
+                            </div>
+                            <div class="col-10">
+                                <select name="sort">
+                                    {% for col_name in ['start_date', 'end_date', 'destination', 'description'] %}
+                                        {% for sort_order in ['asc', 'desc'] %}
+                                            <option value="{{ col_name }} {{ sort_order }}"
+                                            {% if columns_order == col_name + ' ' + sort_order %}
+                                                selected
+                                            {% endif %}
+                                            >
+                                                {{ col_name }} {{ sort_order }}ending
+                                            </option>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="col-2">
+                        <button type="submit" class="btn btn-success">Sort</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Destination</th>
+                <th>Start date</th>
+                <th>End date</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for arrangement in arrangements %}
+            <tr>
+                <td>{{ arrangement.destination }}</td>
+                <td>{{ arrangement.start_date.strftime('%d.%m.%Y') }}</td>
+                <td>{{ arrangement.end_date.strftime('%d.%m.%Y') }}</td>
+                <td>{{ arrangement.description }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3">Showed {{ item_per_page }} item per page.</td>
+                <td colspan="6">
+                    <span class="pull-right">Page {{ page }}</span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    {% if has_prev and prev_url %}
+                    <a href="{{ prev_url }}"><< Previous page </a>
+                    {% endif %}
+                </td>
+                <td colspan="8">
+                    {% if has_next and next_url %}
+                    <a href="{{ next_url }}" class="pull-right">Next page >></a>
+                    {% endif %}
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+    </div>
+</body>

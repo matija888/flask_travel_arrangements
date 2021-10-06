@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 
+## [0.14.0] - 2021-10-06
+### Added
+- Add non-registered user page where they can see only basic arrangements' info
+### Fixed
+- Open index route for non-registered users and redirect them to the login page
+- Restricts all other routes for non-registered users
+
 
 ## [0.13.0] - 2021-10-06
 ### Added
