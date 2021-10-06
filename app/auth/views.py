@@ -53,7 +53,7 @@ def login():
             login_user(user)
             flash('You have successfully login. Welcome!')
             if user.account_type == 'ADMIN':
-                users_pending_requests = User.get_pending_account_type_requests()
+
                 return redirect(url_for('main.admin_panel'))
             else:
                 return redirect(url_for('main.index'))
