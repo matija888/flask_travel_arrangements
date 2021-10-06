@@ -27,11 +27,41 @@
 
     Welcome {{ current_user.username }}
     <hr>
-    <form action="{{ url_for('main.search_users') }}" method="GET" class="row">
-        <div class="col-4">
+    <form action="{{ url_for('main.admin_panel') }}" method="GET" class="row">
+        <div class="col-2">
             <h2>All users</h2>
         </div>
-        <div class="offset-4 col-4">
+        <div class="offset-2 col-4">
+            <div class="row">
+                <div class="col-8">
+                    <div class="row">
+                        <div class="col-2">
+                            Sort:
+                        </div>
+                        <div class="col-10">
+                            <select name="sort">
+                                {% for col_name in ['first_name', 'last_name', 'username', 'email', 'account_type'] %}
+                                    {% for sort_order in ['asc', 'desc'] %}
+                                        <option value="{{ col_name }} {{ sort_order }}"
+                                        {% if columns_order == col_name + ' ' + sort_order %}
+                                            selected
+                                        {% endif %}
+                                        >
+                                            {{ col_name }} {{ sort_order }}ending
+                                        </option>
+                                    {% endfor %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-2">
+                    <button type="submit" class="btn btn-success">Sort</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-4">
             <div class="row">
                 <div class="col-8">
                     <input type="text" placeholder="Search by account type..." name="account_type" class="form-control">
@@ -103,6 +133,7 @@
         </tbody>
     </table>
     <hr>
+
     <h3>Pending requests for upgrading account type permissions</h3>
     <div class="row">
         <div class="col-7">

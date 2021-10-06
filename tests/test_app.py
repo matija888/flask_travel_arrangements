@@ -392,7 +392,7 @@ class TestApp(TestCase):
         self.assertEqual(len(unbooked_arrangements.items), 1)
 
     def test_search_users(self):
-        response = self.client.get('/search_users?account_type=TOURIST')
+        response = self.client.get('/admin_panel?account_type=TOURIST')
         self.assertEqual(response.status_code, 200)
 
     def test_travel_guide_arrangements(self):

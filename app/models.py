@@ -142,8 +142,20 @@ class User(db.Model, UserMixin):
         account_type = kwargs.pop('account_type', '')
         page = kwargs.pop('page', '')
         page = 1 if not page else page
-        if account_type:
-            return cls.query.filter_by(account_type=account_type).paginate(page, ITEM_PER_PAGE, False)
+        columns_order = kwargs.pop('columns_order') if 'columns_order' in kwargs else None
+        if account_type and columns_order:
+            return cls.query\
+                .filter_by(account_type=account_type)\
+                .order_by(text(columns_order))\
+                .paginate(page, ITEM_PER_PAGE, False)
+        elif account_type:
+            return cls.query \
+                .filter_by(account_type=account_type) \
+                .paginate(page, ITEM_PER_PAGE, False)
+        elif columns_order:
+            return cls.query \
+                .order_by(text(columns_order)) \
+                .paginate(page, ITEM_PER_PAGE, False)
         else:
             return cls.query.paginate(page, ITEM_PER_PAGE, False)
 

@@ -20,8 +20,17 @@ def index():
 @requires_account_types('ADMIN')
 def admin_panel():
     page = request.args.get('page', 1, type=int)
+    columns_order = request.args.get('sort')
 
-    users = User.get_all_users(page=page)
+    if request.args.get('account_type'):
+        account_type = request.args.get('account_type').upper()
+        for account in ['TOURIST', 'TRAVEL GUIDE', 'ADMIN']:
+            if account_type in account:
+                account_type = account
+                break
+        users = User.get_all_users(page=page, account_type=account_type, columns_order=columns_order)
+    else:
+        users = User.get_all_users(page=page, columns_order=columns_order)
     has_next = users.has_next
     has_prev = users.has_prev
     next_url = users.next_num if has_next else None
@@ -32,7 +41,7 @@ def admin_panel():
         next_url=url_for('main.admin_panel', page=next_url),
         prev_url=url_for('main.admin_panel', page=prev_url),
         has_next=has_next, has_prev=has_prev,
-        users=users.items, item_per_page=5,
+        users=users.items, item_per_page=ITEM_PER_PAGE,
         page=page
     )
 
@@ -219,30 +228,6 @@ def create_reservation(arrangement_id):
     else:
         arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
         return render_template('main/create_reservation.html', arrangement=arrangement)
-
-
-@main.route('/search_users', methods=['GET'])
-def search_users():
-    account_type = request.args.get('account_type').upper()
-    for account in ['TOURIST', 'TRAVEL GUIDE', 'ADMIN']:
-        if account_type in account:
-            account_type = account
-            break
-    page = request.args.get('page', 1, type=int)
-    users = User.get_all_users(page=page, account_type=account_type)
-    has_next = users.has_next
-    has_prev = users.has_prev
-    next_url = users.next_num if has_next else None
-    prev_url = users.prev_num if has_prev else None
-
-    return render_template(
-        'main/admin.html',
-        next_url=url_for('main.admin_panel', page=next_url),
-        prev_url=url_for('main.admin_panel', page=prev_url),
-        has_next=has_next, has_prev=has_prev,
-        users=users.items, item_per_page=ITEM_PER_PAGE,
-        page=page
-    )
 
 
 @main.route('/travel_guide_arrangements/<guide_id>')
