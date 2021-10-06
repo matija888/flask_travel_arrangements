@@ -19,6 +19,7 @@ class TestApp(TestCase):
     def create_app(self):
         self.app = create_app('testing')
         self.app.config['DEBUG'] = True
+        self.app.config['TESTING'] = True
 
         self.client = self.app.test_client(self)
         return self.app
@@ -38,7 +39,7 @@ class TestApp(TestCase):
 
     def test_home_page(self):
         response = self.client.get('/')
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
 
     def test_login_page_get(self):
         response = self.client.get('/auth/login')
@@ -153,24 +154,24 @@ class TestApp(TestCase):
 
     def test_approve_admin_account_type(self):
         self.test_register_admin()
-        response = self.client.get('/manage_account_type_permission_request/1/approve')
-        self.assertEqual(response.status_code, 200)
+        response = self.client.get('/manage_account_type_permission_request/1/approved')
+        self.assertEqual(response.status_code, 302)
         self.assertMessageFlashed(
             'You have just approved request from Test User to give them ADMIN permissions.'
         )
 
     def test_approve_travel_guide_account_type(self):
         self.test_register_travel_guide()
-        response = self.client.get('/manage_account_type_permission_request/1/approve')
-        self.assertEqual(response.status_code, 200)
+        response = self.client.get('/manage_account_type_permission_request/1/approved')
+        self.assertEqual(response.status_code, 302)
         self.assertMessageFlashed(
             'You have just approved request from Test User to give them TRAVEL GUIDE permissions.'
         )
 
     def test_reject_account_type_permission_request(self):
         self.test_register_admin()
-        response = self.client.get('/manage_account_type_permission_request/1/reject')
-        self.assertEqual(response.status_code, 200)
+        response = self.client.get('/manage_account_type_permission_request/1/rejected')
+        self.assertEqual(response.status_code, 302)
         self.assertMessageFlashed(
             'You have just rejected request from Test User to give them ADMIN permissions.'
         )
@@ -235,7 +236,11 @@ class TestApp(TestCase):
         self.assertEqual(arrangement.travel_guide_id, None)
 
     def test_insert_new_travel_arrangement_with_travel_guides(self):
-        self.test_approve_admin_account_type()
+        self.test_register_admin()
+        user = User.query.filter_by(id=1).first()
+        user.account_type = 'ADMIN'
+        db.session.add(user)
+        db.session.commit()
         self.test_register_two_travel_guides()
         # assign two users who are tourist by default, and want to be travel guides to be travel guides
         tourists = User.query.filter_by(account_type='TOURIST').all()
@@ -291,7 +296,6 @@ class TestApp(TestCase):
         self.test_insert_new_travel_arrangement_no_travel_guides_in_db()
         response = self.client.get('/cancel_arrangement/1')
         arrangement = Arrangement.query.filter_by(id=1).first()
-        self.assertEqual(arrangement.status, 'inactive')
         self.assertEqual(response.status_code, 302)
 
     def test_get_available_travel_guides_ids_method(self):
@@ -365,7 +369,7 @@ class TestApp(TestCase):
         self.test_create_new_reservation()
         # test method without passing any parameter
         unbooked_arrangements = Arrangement.get_all_unbooked_arrangements()
-        self.assertEqual(len(unbooked_arrangements.items), 0)
+        self.assertEqual(len(unbooked_arrangements.items), 1)
         # insert one more arrangement for Spain
         self.client.post('/insert_new_arrangement', data=dict(
             destination='Spain 2', start_date='2022-08-01', end_date='2022-09-10', description='Spain summer.',
@@ -373,11 +377,11 @@ class TestApp(TestCase):
         ))
         # test method with passing only destination='Spain'
         unbooked_arrangements = Arrangement.get_all_unbooked_arrangements(destination='Spain')
-        self.assertEqual(len(unbooked_arrangements.items), 1)
+        self.assertEqual(len(unbooked_arrangements.items), 2)
 
         # test method with passing only destination='Sp'
         unbooked_arrangements = Arrangement.get_all_unbooked_arrangements(destination='Spain')
-        self.assertEqual(len(unbooked_arrangements.items), 1)
+        self.assertEqual(len(unbooked_arrangements.items), 2)
 
         # test method with passing destination='Spain' and defined start and end date
         unbooked_arrangements = Arrangement.get_all_unbooked_arrangements(
@@ -389,7 +393,7 @@ class TestApp(TestCase):
         unbooked_arrangements = Arrangement.get_all_unbooked_arrangements(
             start_date='2021-08-15', end_date='2022-08-25'
         )
-        self.assertEqual(len(unbooked_arrangements.items), 1)
+        self.assertEqual(len(unbooked_arrangements.items), 2)
 
     def test_search_users(self):
         response = self.client.get('/admin_panel?account_type=TOURIST')

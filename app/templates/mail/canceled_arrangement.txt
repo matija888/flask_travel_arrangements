@@ -1,0 +1,6 @@
+Hi {{ reservation.user.first_name }},
+
+Your reservation for the following travel arrangement has just been canceled.
+Destination: {{ reservation.arrangement.destination }}
+Description: {{ reservation.arrangement.description }}
+Number of persons (from reservation): {{ reservation.arrangement.number_of_persons }}

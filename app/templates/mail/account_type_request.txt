@@ -1,0 +1,6 @@
+Hi {{ user.first_name }}
+
+Your request for changing account type to {{ user.desired_account_type }} has been {{ action }}.
+{% if action == 'approved' %}
+You will see new functionalities when you enter the app.
+{% endif %}

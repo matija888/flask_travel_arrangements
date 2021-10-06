@@ -154,15 +154,15 @@
                             <td>{{ user.account_type }}</td>
                             <td>{{ user.desired_account_type }}</td>
                             <td>
-                                <a href="{{ url_for('main.manage_account_type_permission_request', user_id=user.id, action='approve') }}"
+                                <a href="{{ url_for('main.manage_account_type_permission_request', user_id=user.id, action='approved') }}"
                                    hidden id="approve"></a>
-                                <a href="{{ url_for('main.manage_account_type_permission_request', user_id=user.id, action='approve') }}"
+                                <a href="{{ url_for('main.manage_account_type_permission_request', user_id=user.id, action='approved') }}"
                                    class="btn btn-outline-success" role="button" data-toggle="modal" data-target="#confirm-approval"
                                    data-toggle="tooltip" data-placement="top" title="Approve">
                                     <i class="fa fa-check" aria-hidden="true"></i>
                                 </a>
-                                <a href="{{ url_for('main.manage_account_type_permission_request', user_id=user.id, action='reject') }}" hidden id="reject"></a>
-                                <a href="{{ url_for('main.manage_account_type_permission_request', user_id=user.id, action='reject') }}"
+                                <a href="{{ url_for('main.manage_account_type_permission_request', user_id=user.id, action='rejected') }}" hidden id="reject"></a>
+                                <a href="{{ url_for('main.manage_account_type_permission_request', user_id=user.id, action='rejected') }}"
                                    class="btn btn-outline-danger" role="button" data-toggle="modal" data-target="#confirm-reject"
                                    data-toggle="tooltip" data-placement="top" title="Reject">
                                     <i class="fa fa-ban" aria-hidden="true"></i>

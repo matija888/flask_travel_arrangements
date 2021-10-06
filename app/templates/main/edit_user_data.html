@@ -82,7 +82,7 @@
                     </div>
                 </div>
 
-                {% if user.confirmed_desired_account_type != 'pending' %}
+                {% if user.confirmed_desired_account_type not in ['reject', 'pending'] %}
                 <div class="row mb-2">
                     <div class="col-4 text-right">
                         Desired account type:

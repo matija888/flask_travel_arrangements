@@ -2,10 +2,12 @@ from datetime import date
 
 from flask import render_template, flash, request, redirect, url_for, current_app
 from flask_login import login_required, current_user
+from flask_mail import Message
 
+import app
 from . import main
 from app.models import User, Arrangement, Reservation, ITEM_PER_PAGE
-from app import db
+from app import db, mail
 from app.decorators import requires_account_types
 
 
@@ -29,6 +31,7 @@ def admin_panel():
             if account_type in account:
                 account_type = account
                 break
+        account_type = '' if not account_type else account_type
         users = User.get_all_users(page=page, account_type=account_type, columns_order=columns_order)
     else:
         users = User.get_all_users(page=page, columns_order=columns_order)
@@ -55,17 +58,35 @@ def admin_panel():
 def manage_account_type_permission_request(user_id, action):
     user = User.query.filter_by(id=user_id).first()
     if user:
-        if action == 'approve':
+
+        previous_account_type = user.account_type  # store this info in order to revert back if mail is not sent
+        previous_confirmed_desired_account_type = user.confirmed_desired_account_type  # same as previous acc type
+
+        if action == 'approved':
             user.account_type = user.desired_account_type
             user.confirmed_desired_account_type = 'approve'
             flash(f'You have just approved request from {user.first_name} {user.last_name} '
                   f'to give them {user.desired_account_type} permissions.')
-        elif action == 'reject':
+        elif action == 'rejected':
             user.confirmed_desired_account_type = 'reject'
             flash(
                 f'You have just rejected request from {user.first_name} {user.last_name} '
                 f'to give them {user.desired_account_type} permissions.'
             )
+
+        try:
+            msg = Message(
+                f"{action.capitalize()} {user.desired_account_type} account type",
+                recipients=[user.email]
+            )
+            msg.body = render_template(
+                'mail/account_type_request.txt', user=user, action=action
+            )
+            mail.send(msg)
+        except Exception as e:
+            user.account_type = previous_account_type
+            user.confirmed_desired_account_type = previous_confirmed_desired_account_type
+            print(e)
     db.session.add(user)
     db.session.commit()
     return redirect(url_for('main.admin_panel'))
@@ -163,9 +184,29 @@ def edit_arrangement(arrangement_id):
 @requires_account_types('ADMIN')
 def cancel_arrangement(arrangement_id):
     arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
-    arrangement.status = 'inactive'
+    if arrangement.reservations:
+        # send email notification only if there is some reservation for this arrangement
+        for reservation in arrangement.reservations:
+            try:
+                arrangement.status = 'inactive'
+
+                # send mail notification to inform tourists that arrangement has been deleted
+                msg = Message(
+                    f"Travel arrangement ({arrangement.destination} {arrangement.start_date.strftime('%d.%m.%Y')} - {arrangement.end_date.strftime('%d.%m.%Y')}) canceled.",
+                    recipients=[arrangement.reservations[0].user.email]
+                )
+                msg.body = render_template('mail/canceled_arrangement.txt', reservation=reservation)
+                mail.send(msg)
+            except Exception as e:
+                print(e)
+                # revert back to active if there is some problem with sending email
+                arrangement.status = 'active'
+    else:
+        arrangement.status = 'inactive'
+
     db.session.add(arrangement)
     db.session.commit()
+
     return redirect(url_for('main.arrangements'))
 
 
@@ -230,10 +271,28 @@ def create_reservation(arrangement_id):
         if number_of_persons > arrangement.number_of_persons:
             flash('You cannot book reservation with number of persons greater than arrangement number of persons.')
             return redirect(url_for('main.create_reservation', arrangement_id=arrangement_id))
+        elif number_of_persons > (arrangement.number_of_persons - arrangement.reserved_number_of_persons):
+            # there is no available places for this arrangement
+            flash('You cannot reserve more than currently available places for this arrangement.', 'error')
+            return redirect(url_for('main.create_reservation', arrangement_id=arrangement_id))
         else:
-            Reservation.create_reservation(arrangement, current_user.id, number_of_persons)
+            reservation = Reservation.create_reservation(arrangement, current_user.id, number_of_persons)
+
+            Arrangement.book_reservation(arrangement_id=reservation.arrangement_id, number_of_persons=number_of_persons)
+
             flash(f'You have successfully created reservation for {arrangement.description}')
-            return redirect(url_for('main.reservations'))
+            try:
+                msg = Message(
+                    f"Reservation for travel {arrangement.description} successfully created",
+                    recipients=[current_user.email]
+                )
+                msg.body = render_template(
+                    'mail/created_reservation.txt', current_user=current_user, reservation=reservation
+                )
+                mail.send(msg)
+            except Exception as e:
+                print(e)
+        return redirect(url_for('main.reservations'))
     else:
         arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
         return render_template('main/create_reservation.html', arrangement=arrangement)
@@ -244,8 +303,9 @@ def create_reservation(arrangement_id):
 def travel_guide_arrangements(guide_id):
     page = request.args.get('page', 1, type=int)
     travel_arrangements = Arrangement.get_travel_guide_arrangements(guide_id, page=page)
+    guide = User.query.filter_by(id=guide_id).first()
     return render_template(
-        'main/travel_guide_arrangements.html', travel_arrangements=travel_arrangements.items
+        'main/travel_guide_arrangements.html', travel_arrangements=travel_arrangements.items, guide=guide
     )
 
 
@@ -254,8 +314,9 @@ def travel_guide_arrangements(guide_id):
 def tourist_reservations(tourist_id):
     page = request.args.get('page', 1, type=int)
     tourist_reservations = Reservation.get_tourist_reservations(tourist_id, page=page)
+    tourist = User.query.filter_by(id=tourist_id).first()
     return render_template(
-        'main/tourist_reservations.html', tourist_reservations=tourist_reservations.items
+        'main/tourist_reservations.html', tourist_reservations=tourist_reservations.items, tourist=tourist
     )
 
 

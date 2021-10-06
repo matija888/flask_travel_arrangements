@@ -68,10 +68,10 @@
 
             <div class="row mb-2">
                 <div class="col-4 text-right">
-                    Max number of persons:
+                    Available number of persons:
                 </div>
                 <div class="col-8">
-                    {{ arrangement.number_of_persons }}
+                    {{ arrangement.number_of_persons - arrangement.reserved_number_of_persons }}
                 </div>
             </div>
 

@@ -1,0 +1,9 @@
+Hi {{ current_user.first_name }},
+
+You reservation for arrangement {{ reservation.arrangement.destination }} has been created.
+Destination: {{ reservation.arrangement.destination }}
+Description: {{ reservation.arrangement.description }}
+Travel start date: {{ reservation.arrangement.start_date }}
+Travel end date: {{ reservation.arrangement.end_date }}
+Number of persons: {{ reservation.number_of_persons }}
+Price overall: {{ reservation.price }}

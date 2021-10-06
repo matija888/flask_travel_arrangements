@@ -20,7 +20,22 @@ Make a Python virtual environment somewhere using virtualenv package (you need t
 
 5. Run the app from project directory with the following command:
 
-`export FLASK_APP=app.py && flask run`
+`set FLASK_APP=manage.py && set MAIL_DEFAULT_SENDER='test@example.com' && set MAIL_USERNAME='test_user@example.com' && set MAIL_PASSWORD='test_password' && flask run`
+
+This command is for WinOS. For Linux you should use export command instead of set.
+If for some reason this does not enable sending emails, please type in you email credentials in config file:
+MAIL_SERVER = 'smtp.gmail.com'
+Instead of:
+
+    `MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')`
+
+set
+
+   `MAIL_DEFAULT_SENDER = 'test@example.com'
+    MAIL_USERNAME = 'test_user@example.com'
+    MAIL_PASSWORD = 'test_password'`
 
 After these steps the app is available using at http://localhost:5000 or http://127.0.0.1:5000
 

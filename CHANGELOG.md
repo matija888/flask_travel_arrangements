@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 
+## [1.0.0] - 2021-10-06
+### Added
+- Mail notification
+
 ## [0.14.0] - 2021-10-06
 ### Added
 - Add non-registered user page where they can see only basic arrangements' info

@@ -160,13 +160,13 @@ class User(db.Model, UserMixin):
 
 class Arrangement(db.Model):
     __tablename__ = 'arrangement'
-    __searchable__ = ['description', 'destination']
     id = db.Column(db.Integer, primary_key=True)
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
     description = db.Column(db.String(500), nullable=False)
     destination = db.Column(db.String(50), nullable=False)
     number_of_persons = db.Column(db.Integer, nullable=False)
+    reserved_number_of_persons = db.Column(db.Integer, nullable=True, default=0)
     price = db.Column(db.Numeric(9, 2), nullable=False)
     status = db.Column(db.Enum('active', 'inactive', name='status'), nullable=True, default='active')
     travel_guide_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -184,7 +184,6 @@ class Arrangement(db.Model):
         five_days_after_today = date.today() + timedelta(days=5)
         if destination and start_date and end_date:
             return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
-                Reservation.user_id == None,
                 cls.status == 'active',
                 Arrangement.start_date >= five_days_after_today
             ).filter(cls.destination.ilike(f'%{destination}%'))\
@@ -219,7 +218,6 @@ class Arrangement(db.Model):
                 .paginate(page, ITEM_PER_PAGE, False)
         elif destination:
             return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
-                Reservation.user_id == None,
                 cls.status == 'active',
                 Arrangement.start_date > five_days_after_today
             ).filter(cls.destination.ilike(f'%{destination}%')) \
@@ -227,7 +225,6 @@ class Arrangement(db.Model):
                 .paginate(page, ITEM_PER_PAGE, False)
         elif start_date and end_date:
             return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
-                Reservation.user_id == None,
                 cls.status == 'active',
                 Arrangement.start_date >= five_days_after_today
             ).filter(
@@ -261,7 +258,6 @@ class Arrangement(db.Model):
                 .paginate(page, ITEM_PER_PAGE, False)
         else:
             return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
-                Reservation.user_id == None,
                 cls.status == 'active',
                 Arrangement.start_date > five_days_after_today
             ).order_by(Arrangement.start_date).paginate(page, ITEM_PER_PAGE, False)
@@ -288,6 +284,14 @@ class Arrangement(db.Model):
             # sort by start_date ASC by default
             return cls.query.order_by(cls.start_date).paginate(page, ITEM_PER_PAGE, False)
 
+    @classmethod
+    def book_reservation(cls, arrangement_id, number_of_persons):
+        # book places (number_of_persons from reservation) in arrangement
+        arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
+        arrangement.reserved_number_of_persons += number_of_persons
+        db.session.add(arrangement)
+        db.session.commit()
+
 
 class Reservation(db.Model):
     __tablename__ = 'reservation'
@@ -297,7 +301,7 @@ class Reservation(db.Model):
     number_of_persons = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Numeric(9, 2), nullable=False)
 
-    arrangement = db.relationship('Arrangement', foreign_keys=[arrangement_id])
+    arrangement = db.relationship('Arrangement', foreign_keys=[arrangement_id], backref='reservations')
     user = db.relationship('User', foreign_keys=[user_id])
 
     @staticmethod
@@ -314,7 +318,7 @@ class Reservation(db.Model):
         else:
             price = arrangement.price * number_of_persons
         reservation = Reservation(
-            arrangement_id=arrangement.id, user_id=user_id, number_of_persons=number_of_persons, price=price
+            arrangement_id=arrangement.id, user_id=user_id, number_of_persons=number_of_persons, price=price,
         )
         db.session.add(reservation)
         db.session.commit()
