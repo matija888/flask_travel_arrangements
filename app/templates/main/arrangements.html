@@ -181,9 +181,13 @@
                 {% endif %}
 
                 {% if current_user.account_type in ['ADMIN'] %}
+                    {% if arrangement.status == 'active' %}
                     <td>
                         <a href="{{ url_for('main.delete_arrangement', arrangement_id=arrangement.id) }}" class="btn btn-danger">Delete</a>
                     </td>
+                    {% else %}
+                        <td>To late to delete</td>
+                    {% endif %}
                 {% else %}
                     <td>Do not have permission</td>
                 {% endif %}

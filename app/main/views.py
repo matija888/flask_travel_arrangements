@@ -36,13 +36,15 @@ def admin_panel():
     next_url = users.next_num if has_next else None
     prev_url = users.prev_num if has_prev else None
 
+    users_pending_requests = User.get_pending_account_type_requests()
+
     return render_template(
         'main/admin.html',
         next_url=url_for('main.admin_panel', page=next_url),
         prev_url=url_for('main.admin_panel', page=prev_url),
         has_next=has_next, has_prev=has_prev,
         users=users.items, item_per_page=ITEM_PER_PAGE,
-        page=page
+        page=page, users_pending_requests=users_pending_requests
     )
 
 

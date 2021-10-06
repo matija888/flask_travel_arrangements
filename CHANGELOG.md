@@ -12,9 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 
-## [0.12.0] - 2021-10-06
+## [0.12.1] - 2021-10-06
 ### Added
 - Add sorting user's table
+
+
+## [0.11.1] - 2021-10-06
+### Fixed
+- Do not allow admin to delete arrangement if it is too late for that
+- Show pending requests for account type change in admin panel
 
 ## [0.11.0] - 2021-10-06
 ### Added
