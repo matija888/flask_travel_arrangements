@@ -26,7 +26,7 @@
     {% endwith %}
 
     {% if current_user.account_type == 'ADMIN' %}
-        <h2>Travel guide's arrangements</h2>
+        <h2>{{ travel_arrangements[0].guide.first_name }} {{ travel_arrangements[0].guide.last_name }}'s arrangements</h2>
     {% else %}
         <h2>My arrangements</h2>
     {% endif %}

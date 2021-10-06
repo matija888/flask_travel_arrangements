@@ -67,7 +67,7 @@ def manage_account_type_permission_request(user_id, action):
             )
     db.session.add(user)
     db.session.commit()
-    return render_template('main/admin.html')
+    return redirect(url_for('main.admin_panel'))
 
 
 @main.route('/edit_user_data/<user_id>', methods=['GET', 'POST'])

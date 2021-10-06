@@ -18,9 +18,6 @@
 <body>
 
 <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
-    <a class="navbar-brand d-none d-md-inline-block">
-        <img src="" alt="LOGO" id="logo" style="height: 40px; margin-right: 1em">
-    </a>
 
     <ul class="collapse navbar-collapse navbar-expand-md" id="togglerNav">
         <li class="nav-item">
@@ -52,9 +49,14 @@
         {% endif %}
 
         <li class="nav-item">
-            <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Log out</a>
+
         </li>
+
     </ul><!-- navbar-nav -->
+
+    <div style="color: white; margin-right: 100px;">Username: {{ current_user.username }}</div>
+
+    <a href="{{ url_for('auth.logout') }}" style="color: white;"><i class="fas fa-sign-out-alt"></i> Log out</a>
 
 </nav>
 

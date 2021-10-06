@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 
+## [0.13.0] - 2021-10-06
+### Added
+- Add information who is currently logged user (username in nav)
+### Fixed
+- Do not display info about pending account type change if it is rejected by admin
+
 ## [0.12.1] - 2021-10-06
 ### Fixed
 - Do not allow admin to delete arrangement if it is too late for that

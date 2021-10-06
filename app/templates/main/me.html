@@ -84,7 +84,7 @@
     </div>
     <div class="row">
         <div class="col-8">
-            {% if current_user.account_type != current_user.desired_account_type %}
+            {% if current_user.account_type != current_user.desired_account_type and current_user.confirmed_desied_account_type == 'pending' %}
                 <div class="alert alert-warning">
                     You have asked to have permission for {{ current_user.desired_account_type }} account type. <br>
                     When ADMIN approve your request, you will have all permissions that have desired account type. <br>

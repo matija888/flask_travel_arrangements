@@ -25,7 +25,7 @@
         {% endif %}
     {% endwith %}
 
-    <h2>Tourist's reservations</h2>
+    <h2>{{ tourist_reservations[0].user.first_name }} {{ tourist_reservations[0].user.last_name }}'s reservations</h2>
     <table class="table table-striped">
         <thead>
             <tr>
