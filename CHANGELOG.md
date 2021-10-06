@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 
+## [0.11.0] - 2021-10-06
+### Added
+- Pagination for all tables and sorting for travel arrangements
+- Filtering:
+    - ADMIN can filter users by account type
+    - TOURIST can search for arrangements base on a destination a period of time
+
 ## [0.10.0] - 2021-10-05
 ### Added
 - Create reservations feature
