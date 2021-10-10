@@ -1,4 +1,4 @@
-from flask import render_template, request, flash, redirect, url_for
+from flask import render_template, request, flash, redirect, url_for, jsonify
 from flask_login import login_user, logout_user, login_required
 
 from . import auth
@@ -6,13 +6,17 @@ from app.models import User
 from app import db
 
 
-@auth.route('/register', methods=['GET', 'POST'])
+def return_message_to_client(message, status_code):
+    return jsonify({'message': message}), status_code
+
+
+@auth.route('/api/v1.0/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         form = request.form
         user = User.query.filter_by(username=form['username']).first()
         if user is None:
-            # There is not user in the database.
+            # There is no user in the database.
             if form['password'] == form['confirm_password']:
                 # insert a new user if password and confirmed password are equal
                 user = User(
@@ -24,48 +28,44 @@ def register():
                 db.session.add(user)
                 db.session.commit()
                 login_user(user)
-                flash('You have successfully created a new user account. Welcome')
-                return redirect(url_for('main.index'))
+                msg = 'You have successfully created a new user account. Welcome'
+                status_code = 201
             else:
-                # redirect back to the login page and inform the user that two passwords do not match
-                flash('The password that you entered does not match with confirmed password. Please try again', 'error')
-                return render_template('auth/register.html', form=form)
+                msg = 'The password that you entered does not match with confirmed password. Please try again'
+                status_code = 401
         else:
-            flash('The username that you have just entered already exists in the database.')
-            return redirect(url_for('auth.register'))
+            msg = 'The username that you have just entered already exists in the database.'
+            status_code = 409
+
+        return return_message_to_client(msg, status_code)
     else:
-        return render_template('auth/register.html')
+        return return_message_to_client('Method Not Allowed', 405)
 
 
-@auth.route('/login', methods=['GET', 'POST'])
+@auth.route('/api/v1.0/login', methods=['POST', 'GET'])
 def login():
     if request.method == 'POST':
-        form = request.form
+        form = request.authorization
         user = User.query.filter_by(username=form['username']).first()
         if user is None:
-            flash(
-                'There is no account with the username that you entered. '
-                'Please check your username or register a new account.',
-                'error'
-            )
-            return redirect(url_for('auth.login'))
+            msg = 'There is no account with the username that you entered. '
+            msg += 'Please check your username or register a new account.'
+            status_code = 401
         elif user.verify_password(form['password']):
             login_user(user)
-            flash('You have successfully login. Welcome!')
-            if user.account_type == 'ADMIN':
-
-                return redirect(url_for('main.admin_panel'))
-            else:
-                return redirect(url_for('main.index'))
+            msg = 'You have successfully login. Welcome!'
+            status_code = 200
         else:
-            flash('Incorrect username or password!', 'error')
-            return redirect(url_for('auth.login'))
+            msg = 'Incorrect username or password!'
+            status_code = 401
+
+        return return_message_to_client(msg, status_code)
     else:
-        return render_template('auth/login.html')
+        return return_message_to_client('Method Not Allowed', 405)
 
 
 @auth.route('/logout', methods=['GET'])
-@login_required
+# @login_required
 def logout():
     logout_user()
     flash('You have been logged out. Bye!')

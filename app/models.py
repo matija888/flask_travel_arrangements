@@ -4,8 +4,8 @@ import datetime
 
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-from flask import request, current_app
 from sqlalchemy import and_, or_, text
+from marshmallow import Schema, fields
 
 from app import db, login_manager
 
@@ -18,7 +18,21 @@ def get_user(user_id):
 ITEM_PER_PAGE = 5
 
 
-class User(db.Model, UserMixin):
+class DatabaseObject:
+    """
+    convert_object_to_json_string method converts objects from child classes(User, Arrangement, Reservation etc...)
+    into the list which contains JSON formatted strings
+    """
+    @classmethod
+    def convert_object_to_json_string(cls, schema, list):
+        result = []
+        for item in list:
+            marshmallow_item = schema.dump(item)
+            result.append(marshmallow_item)
+        return result
+
+
+class User(db.Model, UserMixin, DatabaseObject):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(100), nullable=False)
@@ -149,16 +163,31 @@ class User(db.Model, UserMixin):
         elif account_type:
             return cls.query \
                 .filter_by(account_type=account_type) \
-                .paginate(page, ITEM_PER_PAGE, False)
+                .paginate(page, ITEM_PER_PAGE, False).items
         elif columns_order:
             return cls.query \
                 .order_by(text(columns_order)) \
-                .paginate(page, ITEM_PER_PAGE, False)
+                .paginate(page, ITEM_PER_PAGE, False).items
         else:
-            return cls.query.paginate(page, ITEM_PER_PAGE, False)
+            return cls.query.paginate(page, ITEM_PER_PAGE, False).items
+
+    @classmethod
+    def get_all_json(cls):
+        schema = globals()[cls.__name__ + 'Schema']()
+        objs = cls.get_all_users()
+        objs_json = cls.convert_object_to_json_string(schema, objs)
+        return objs_json
 
 
-class Arrangement(db.Model):
+class UserSchema(Schema):
+    id =fields.Int()
+    first_name = fields.Str()
+    last_name = fields.Str()
+    email = fields.Str()
+    username = fields.Str()
+
+
+class Arrangement(db.Model, DatabaseObject):
     __tablename__ = 'arrangement'
     id = db.Column(db.Integer, primary_key=True)
     start_date = db.Column(db.Date, nullable=False)
@@ -278,11 +307,15 @@ class Arrangement(db.Model):
         page = kwargs.pop('page', '')
         page = 1 if not page else page
         columns_order = kwargs.pop('columns_order') if 'columns_order' in kwargs else None
+        creator_id = kwargs.pop('creator_id') if 'creator_id' in kwargs else None
+
         if columns_order:
-            return cls.query.order_by(text(columns_order)).paginate(page, ITEM_PER_PAGE, False)
+            objs = cls.query.order_by(text(columns_order)).paginate(page, ITEM_PER_PAGE, False).items
         else:
             # sort by start_date ASC by default
-            return cls.query.order_by(cls.start_date).paginate(page, ITEM_PER_PAGE, False)
+            objs = cls.query.order_by(cls.start_date).paginate(page, ITEM_PER_PAGE, False).items
+
+        return cls.convert_object_to_json_string(ArrangementSchema(), objs)
 
     @classmethod
     def book_reservation(cls, arrangement_id, number_of_persons):
@@ -291,6 +324,38 @@ class Arrangement(db.Model):
         arrangement.reserved_number_of_persons += number_of_persons
         db.session.add(arrangement)
         db.session.commit()
+
+    @classmethod
+    def insert_new_arrangement(cls, **kwargs):
+        destination = kwargs.pop('destination', '')
+        description = kwargs.pop('description', '')
+        start_date = kwargs.pop('start_date', '')
+        end_date = kwargs.pop('end_date', '')
+        number_of_persons = kwargs.pop('number_of_persons', '')
+        price = kwargs.pop('price', '')
+        arrangement = Arrangement(
+            destination=destination, start_date=start_date, end_date=end_date, description=description,
+            number_of_persons=number_of_persons, price=price
+        )
+        db.session.add(arrangement)
+        db.session.commit()
+        return cls.get_arrangement_json(arrangement_id=arrangement.id)
+
+    @classmethod
+    def get_arrangement_json(cls, arrangement_id):
+        obj = cls.query.filter_by(id=arrangement_id).first()
+        schema = ArrangementSchema()
+        return schema.dump(obj)
+
+
+class ArrangementSchema(Schema):
+    id = fields.Int()
+    destination = fields.Str()
+    description = fields.Str()
+    start_date = fields.Date()
+    end_date = fields.Date()
+    number_of_persons = fields.Int()
+    price = fields.Decimal(as_string=True)
 
 
 class Reservation(db.Model):

@@ -1,10 +1,9 @@
 from datetime import date
 
-from flask import render_template, flash, request, redirect, url_for, current_app
+from flask import render_template, flash, request, redirect, url_for, current_app, jsonify, abort
 from flask_login import login_required, current_user
 from flask_mail import Message
 
-import app
 from . import main
 from app.models import User, Arrangement, Reservation, ITEM_PER_PAGE
 from app import db, mail
@@ -16,40 +15,6 @@ def index():
     if not current_user.is_authenticated:
         return redirect(url_for('auth.login'))
     return render_template('main/me.html')
-
-
-@main.route('/admin_panel')
-@login_required
-@requires_account_types('ADMIN')
-def admin_panel():
-    page = request.args.get('page', 1, type=int)
-    columns_order = request.args.get('sort')
-
-    if request.args.get('account_type'):
-        account_type = request.args.get('account_type').upper()
-        for account in ['TOURIST', 'TRAVEL GUIDE', 'ADMIN']:
-            if account_type in account:
-                account_type = account
-                break
-        account_type = '' if not account_type else account_type
-        users = User.get_all_users(page=page, account_type=account_type, columns_order=columns_order)
-    else:
-        users = User.get_all_users(page=page, columns_order=columns_order)
-    has_next = users.has_next
-    has_prev = users.has_prev
-    next_url = users.next_num if has_next else None
-    prev_url = users.prev_num if has_prev else None
-
-    users_pending_requests = User.get_pending_account_type_requests()
-
-    return render_template(
-        'main/admin.html',
-        next_url=url_for('main.admin_panel', page=next_url),
-        prev_url=url_for('main.admin_panel', page=prev_url),
-        has_next=has_next, has_prev=has_prev,
-        users=users.items, item_per_page=ITEM_PER_PAGE,
-        page=page, users_pending_requests=users_pending_requests
-    )
 
 
 @main.route('/manage_account_type_permission_request/<user_id>/<action>')
@@ -111,45 +76,57 @@ def edit_user_data(user_id):
     return render_template('main/edit_user_data.html', user=user)
 
 
-@main.route('/insert_new_arrangement', methods=['POST'])
+@main.route('/api/v1.0/arrangements', methods=['POST'])
+# @login_required
+# @requires_account_types('ADMIN')
+def insert_arrangement():
+
+    def all_fields_exist(json_request):
+        """"
+            :param json_request as request.json from the client
+            :returns list of two elements
+                - first is True when everything is ok regarding json data existence
+                - first is False when some of the data from client are missing
+                - second element is message which is only be used in response when some data is missing to inform client
+                about missing data
+        """
+        for field in ['destination', 'description', 'start_date', 'end_date', 'number_of_persons', 'price']:
+            if field not in json_request:
+                return False, field
+        return True, 'OK'  # this is added in order to send some default message when all data has been sent from client
+
+    json = request.json
+    if not json or not all_fields_exist(json)[0]:
+        non_existing_field = all_fields_exist(json)[1]
+        msg = f'{non_existing_field} data is required for creating a new arrangement! '
+        msg += 'Please add them in the the HTTP body and send the request again.'
+        response = jsonify(
+            {'message': msg}
+        )
+        response.status_code = 400
+        return response
+
+    arrangement = Arrangement.insert_new_arrangement(
+        destination=json['destination'], description=json['description'],
+        start_date=json['start_date'], end_date=json['end_date'], number_of_persons=json['number_of_persons'],
+        price=json['price']
+    )
+    return arrangement, 201
+
+
+@main.route('/api/v1.0/arrangements', methods=['GET'])
 @login_required
 @requires_account_types('ADMIN')
-def insert_new_arrangement():
-    if request.method == 'POST':
-        form = request.form
-        arrangement = Arrangement(
-            destination=form['destination'], start_date=form['start_date'], end_date=form['end_date'],
-            description=form['description'], number_of_persons=form['number_of_persons'], price=form['price']
-        )
-        db.session.add(arrangement)
-        db.session.commit()
-        flash('You have successfully inserted a new travel arrangement.')
-    return redirect(url_for('main.arrangements'))
-
-
-@main.route('/arrangements', methods=['GET'])
 def arrangements():
-    page = request.args.get('page', 1, type=int)
-    columns_order = request.args.get('sort')
-    arrangements = Arrangement.get_all_travel_arrangements(page=page, columns_order=columns_order)
-    has_next = arrangements.has_next
-    has_prev = arrangements.has_prev
-    next_url = arrangements.next_num if has_next else None
-    prev_url = arrangements.prev_num if has_prev else None
+    page = int(request.args.get('page', 1))
+    columns_order = request.args.get('columns_order')
+    creator_id = request.args.get('creator_id')  # TODO: Put in creator_id currently logged in user
+    creator_id = 1
 
-    if current_user.is_authenticated:
-        template = 'main/arrangements.html'
-    else:
-        template = 'main/non_registered_user_page.html'
-
-    return render_template(
-        template, current_date=date.today(),
-        arrangements=arrangements.items,
-        next_url=url_for('main.arrangements', page=next_url, columns_order='start_date asc'),
-        prev_url=url_for('main.arrangements', page=prev_url, columns_order='start_date asc'),
-        has_next=has_next, has_prev=has_prev, item_per_page=5,
-        page=page, columns_order=columns_order
+    arrangements = Arrangement.get_all_travel_arrangements(
+        page=page, columns_order=columns_order, creator_id=creator_id
     )
+    return jsonify(arrangements)
 
 
 @main.route('/edit_arrangement/<arrangement_id>', methods=['GET', 'POST'])
