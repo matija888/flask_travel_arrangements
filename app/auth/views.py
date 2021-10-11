@@ -4,6 +4,7 @@ from flask_login import login_user, logout_user, login_required
 from . import auth
 from app.models import User
 from app import db
+from app.decorators import authenticated_user
 
 
 def return_message_to_client(message, status_code):
@@ -64,9 +65,8 @@ def login():
         return return_message_to_client('Method Not Allowed', 405)
 
 
-@auth.route('/logout', methods=['GET'])
-# @login_required
+@auth.route('/api/v1.0/logout', methods=['POST'])
+@authenticated_user
 def logout():
     logout_user()
-    flash('You have been logged out. Bye!')
-    return redirect(url_for('auth.login'))
+    return return_message_to_client('You have been logged out. Bye!', 200)

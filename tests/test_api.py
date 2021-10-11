@@ -1,8 +1,10 @@
 import unittest
+from unittest.mock import MagicMock
 from base64 import b64encode
 
 from flask_testing import TestCase
 from flask_login import LoginManager
+from sqlalchemy.exc import IntegrityError
 
 from app import create_app, db
 from app.models import Arrangement, User
@@ -61,7 +63,14 @@ class TestAPI(TestCase):
         msg = {'message': error_msg}
         self.assertEqual(response.json, msg)
 
-    def test_insert_arrangement_good_request(self):
+    @unittest.mock.patch('flask_login.utils._get_user')
+    def test_insert_arrangement_good_request(self, current_user):
+        mock_current_user = MagicMock()
+        mock_current_user.id = 1
+        current_user.return_value = mock_current_user
+
+        self.test_insert_travel_admin()
+
         response = self.client.post(
             '/api/v1.0/arrangements', json={
                 'destination': 'Serbia',
@@ -76,7 +85,13 @@ class TestAPI(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json, arrangement)
 
-    def test_insert_9_arrangements(self):
+    @unittest.mock.patch('flask_login.utils._get_user')
+    def test_insert_9_arrangements(self, current_user):
+        mock_current_user = MagicMock()
+        mock_current_user.id = 1
+        current_user.return_value = mock_current_user
+
+        self.test_insert_travel_guide()
         for month in range(1, 10):
             self.client.post(
                 '/api/v1.0/arrangements', json={
@@ -141,7 +156,7 @@ class TestAPI(TestCase):
         self.assertEqual(response.json, {'message': 'You have successfully login. Welcome!'})
         self.assertEqual(response.status_code, return_message_to_client('Method Not Allowed', 200)[1])
 
-    def test_register(self):
+    def test_register_route(self):
         self.test_login()
         # GET should be not allowed method
         response = self.client.get('/auth/api/v1.0/register')
@@ -184,6 +199,97 @@ class TestAPI(TestCase):
             response.json,
             {'message': 'You have successfully created a new user account. Welcome'}
         )
+
+    def test_insert_travel_guide(self):
+        response = self.client.post(
+            '/auth/api/v1.0/register', data=dict(
+                first_name='Travel', last_name='Guide', email='travel@guide.com', username='guide',
+                password='guide', confirm_password='guide', desired_account_type='TRAVEL GUIDE'
+            )
+        )
+        self.assertEqual(response.status_code, 201)
+        tourist = User.query.filter_by(desired_account_type='TRAVEL GUIDE').first()
+        tourist.account_type = 'TRAVEL GUIDE'
+        db.session.add(tourist)
+        db.session.commit()
+
+    def test_insert_travel_admin(self):
+        response = self.client.post(
+            '/auth/api/v1.0/register', data=dict(
+                first_name='Travel', last_name='admin', email='admin@admin.com', username='admin',
+                password='admin', confirm_password='admin', desired_account_type='ADMIN'
+            )
+        )
+        self.assertEqual(response.status_code, 201)
+        tourist = User.query.filter_by(desired_account_type='ADMIN').first()
+        tourist.account_type = 'TRAVEL GUIDE'
+        db.session.add(tourist)
+        db.session.commit()
+
+    @unittest.mock.patch('flask_login.utils._get_user')
+    def test_update_arrangement(self, current_user):
+        mock_current_user = MagicMock()
+        mock_current_user.id = 1
+        current_user.return_value = mock_current_user
+
+        self.test_insert_travel_admin()
+        self.test_insert_9_arrangements()
+        # send PUT request without any data
+        response = self.client.put('/api/v1.0/arrangements/5')
+        self.assertEqual(response.status_code, 400)
+        error_msg = 'You need to send json data in order to update arrangement.'
+        self.assertEqual(response.json, {'message': error_msg})
+
+        # send PUT request with data (except travel_guide_id)
+        updated_destination = 'Destination updated'
+        updated_description = 'Description updated'
+        updated_start_date = '01.01.2022'
+        updated_end_date = '15.01.2022'
+        response = self.client.put('/api/v1.0/arrangements/5', json=dict(
+            destination=updated_destination, description=updated_description,
+            start_date=updated_start_date, end_date=updated_end_date
+        ))
+        self.assertEqual(response.status_code, 200)
+        arrangement = Arrangement.query.filter_by(id=5).first()
+        self.assertEqual(arrangement.destination, updated_destination)
+        self.assertEqual(arrangement.description, updated_description)
+        self.assertEqual(arrangement.start_date.strftime('%d.%m.%Y'), updated_start_date)
+        self.assertEqual(arrangement.end_date.strftime('%d.%m.%Y'), updated_end_date)
+        self.assertEqual(arrangement.travel_guide_id, None)
+
+        # send PUT request with data (INCLUDING travel_guide_id)
+        with self.assertRaises(IntegrityError):
+            response = self.client.put('/api/v1.0/arrangements/5', json=dict(
+                destination=updated_destination, description=updated_description,
+                start_date=updated_start_date, end_date=updated_end_date, travel_guide_id=3
+            ))
+            msg = 'You are trying to assign travel_guide who does not exist in the database.'
+            print(response)
+            self.assert400(response, message=msg)
+
+    def test_update_non_existing_arrangement(self):
+        response = self.client.put('/api/v1.0/arrangements/123456', json=dict(
+            destination='Test', description='Test',
+            start_date='01.01.2022', end_date='10.01.2022'
+        ))
+        msg = 'Arrangement that you are trying to update does not exist!'
+        self.assert404(response, message=msg)
+
+    def test_cancel_arrangement(self):
+        # POST is NOT ALLOWED method
+        response = self.client.post('/api/v1.0/cancel_arrangement/1')
+        self.assert405(response)
+        self.assertEqual(response.json, {'message': 'PUT is only allowed method for canceling the arrangement'})
+
+        # try to cancel non existing arrangement
+        response = self.client.put('/api/v1.0/cancel_arrangement/1')
+        self.assert404(response)
+
+        self.test_insert_arrangement_good_request()
+
+        # PUT is ALLOWED method
+        response = self.client.put('/api/v1.0/cancel_arrangement/1')
+        self.assert200(response)
 
 
 if __name__ == '__main__':

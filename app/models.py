@@ -3,7 +3,7 @@ from decimal import Decimal
 import datetime
 
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin
+from flask_login import UserMixin, current_user
 from sqlalchemy import and_, or_, text
 from marshmallow import Schema, fields
 
@@ -199,6 +199,7 @@ class Arrangement(db.Model, DatabaseObject):
     price = db.Column(db.Numeric(9, 2), nullable=False)
     status = db.Column(db.Enum('active', 'inactive', name='status'), nullable=True, default='active')
     travel_guide_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     guide = db.relationship('User', foreign_keys=[travel_guide_id], backref='arrangement')
 
@@ -335,7 +336,7 @@ class Arrangement(db.Model, DatabaseObject):
         price = kwargs.pop('price', '')
         arrangement = Arrangement(
             destination=destination, start_date=start_date, end_date=end_date, description=description,
-            number_of_persons=number_of_persons, price=price
+            number_of_persons=number_of_persons, price=price, created_by=current_user.id
         )
         db.session.add(arrangement)
         db.session.commit()

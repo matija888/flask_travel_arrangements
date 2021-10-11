@@ -1,13 +1,18 @@
-from datetime import date
+from datetime import date, timedelta
 
 from flask import render_template, flash, request, redirect, url_for, current_app, jsonify, abort
 from flask_login import login_required, current_user
 from flask_mail import Message
+from sqlalchemy.exc import IntegrityError
 
 from . import main
 from app.models import User, Arrangement, Reservation, ITEM_PER_PAGE
 from app import db, mail
-from app.decorators import requires_account_types
+from app.decorators import requires_account_types, authenticated_user
+
+
+def return_message_to_client(message, status_code):
+    return jsonify({'message': message}), status_code
 
 
 @main.route('/')
@@ -18,8 +23,6 @@ def index():
 
 
 @main.route('/manage_account_type_permission_request/<user_id>/<action>')
-@login_required
-@requires_account_types('ADMIN')
 def manage_account_type_permission_request(user_id, action):
     user = User.query.filter_by(id=user_id).first()
     if user:
@@ -58,7 +61,6 @@ def manage_account_type_permission_request(user_id, action):
 
 
 @main.route('/edit_user_data/<user_id>', methods=['GET', 'POST'])
-@login_required
 def edit_user_data(user_id):
     user = User.query.filter_by(id=user_id).first()
     if request.method == 'POST':
@@ -77,8 +79,7 @@ def edit_user_data(user_id):
 
 
 @main.route('/api/v1.0/arrangements', methods=['POST'])
-# @login_required
-# @requires_account_types('ADMIN')
+@requires_account_types('ADMIN')
 def insert_arrangement():
 
     def all_fields_exist(json_request):
@@ -115,8 +116,7 @@ def insert_arrangement():
 
 
 @main.route('/api/v1.0/arrangements', methods=['GET'])
-@login_required
-@requires_account_types('ADMIN')
+@authenticated_user
 def arrangements():
     page = int(request.args.get('page', 1))
     columns_order = request.args.get('columns_order')
@@ -129,78 +129,87 @@ def arrangements():
     return jsonify(arrangements)
 
 
-@main.route('/edit_arrangement/<arrangement_id>', methods=['GET', 'POST'])
-@login_required
-@requires_account_types('ADMIN', 'TRAVEL GUIDE')
+@main.route('/api/v1.0/arrangements/<arrangement_id>', methods=['PUT'])
 def edit_arrangement(arrangement_id):
     arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
-    if request.method == 'POST':
-        form = request.form
-        for field in form:
+    if arrangement is None:
+        msg = 'Arrangement that you are trying to update does not exist!'
+        return return_message_to_client(msg, 404)
+
+    if arrangement.created_by != current_user.id:
+        msg = f'Only creator of the arrangement id {arrangement.id} can update it!'
+        return return_message_to_client(msg, 404)
+
+    five_days_after_today = date.today() + timedelta(days=5)
+    if five_days_after_today > arrangement.start_date:
+        msg = f'It is too late to edit {arrangement.id} because start date of the arrangement is {arrangement.start_date}.'
+        return return_message_to_client(msg, 404)
+
+    if request.method == 'PUT':
+        data = request.json
+        if not data:
+            return return_message_to_client('You need to send json data in order to update arrangement.', 400)
+
+        for field in data:
             if hasattr(arrangement, field):
                 if field == 'travel_guide_id':
                     # if travel guide is chosen in insert a new travel arrangement use that value
                     # if user did not chose travel guide that means that we get 'None' string from the client
-                    travel_guide_id = form['travel_guide_id'] if form['travel_guide_id'] != 'None' else None
-                    setattr(arrangement, 'travel_guide_id', travel_guide_id)
+                    travel_guide_id = data['travel_guide_id'] if data['travel_guide_id'] != 'None' else None
+                    try:
+                        setattr(arrangement, 'travel_guide_id', travel_guide_id)
+                    except IntegrityError as e:
+                        # user is trying to update the arrangement with travel_guide which does not exist
+                        print(e)  # print this in log file in order to see that Integrity error has occurred
+                        msg = 'You are trying to assign travel_guide who does not exist in the database.'
+                        return return_message_to_client(msg, 400)
                 else:
-                    setattr(arrangement, field, form[field])
+                    setattr(arrangement, field, data[field])
+
         db.session.add(arrangement)
         db.session.commit()
-        flash(f'You have just successfully changed data for the travel arrangement id {arrangement.id}')
-    travel_guides = User.get_available_travel_guides_ids(
-        start_travel_date=arrangement.start_date, end_travel_date=arrangement.end_date
-    )
-    return render_template(
-        'main/edit_arrangement.html', arrangement=arrangement, current_date=date.today(), travel_guides=travel_guides
-    )
+        msg = f'You have just successfully changed data for the travel arrangement id {arrangement.id}'
+        return return_message_to_client(msg, 200)
 
 
-@main.route('/cancel_arrangement/<arrangement_id>')
-@login_required
+@main.route('/api/v1.0/cancel_arrangement/<arrangement_id>', methods=['PUT', 'GET', 'POST'])
+@authenticated_user
 @requires_account_types('ADMIN')
 def cancel_arrangement(arrangement_id):
-    arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
-    if arrangement.reservations:
-        # send email notification only if there is some reservation for this arrangement
-        for reservation in arrangement.reservations:
-            try:
-                arrangement.status = 'inactive'
+    if request.method == 'PUT':
+        arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
+        if arrangement is None:
+            msg = 'Arrangement that you are trying to cancel does not exist!'
+            return return_message_to_client(msg, 404)
+        if arrangement.reservations:
+            # send email notification only if there is some reservation for this arrangement
+            for reservation in arrangement.reservations:
+                try:
+                    arrangement.status = 'inactive'
 
-                # send mail notification to inform tourists that arrangement has been deleted
-                msg = Message(
-                    f"Travel arrangement ({arrangement.destination} {arrangement.start_date.strftime('%d.%m.%Y')} - {arrangement.end_date.strftime('%d.%m.%Y')}) canceled.",
-                    recipients=[arrangement.reservations[0].user.email]
-                )
-                msg.body = render_template('mail/canceled_arrangement.txt', reservation=reservation)
-                mail.send(msg)
-            except Exception as e:
-                print(e)
-                # revert back to active if there is some problem with sending email
-                arrangement.status = 'active'
+                    # send mail notification to inform tourists that arrangement has been deleted
+                    msg = Message(
+                        f"Travel arrangement ({arrangement.destination} {arrangement.start_date.strftime('%d.%m.%Y')} - {arrangement.end_date.strftime('%d.%m.%Y')}) canceled.",
+                        recipients=[arrangement.reservations[0].user.email]
+                    )
+                    msg.body = render_template('mail/canceled_arrangement.txt', reservation=reservation)
+                    mail.send(msg)
+                except Exception as e:
+                    print(e)
+                    # revert back to active if there is some problem with sending email
+                    arrangement.status = 'active'
+        else:
+            arrangement.status = 'inactive'
+
+        db.session.add(arrangement)
+        db.session.commit()
+
+        return return_message_to_client(f'You have successfully canceled arrangement id {arrangement.id}', 200)
     else:
-        arrangement.status = 'inactive'
-
-    db.session.add(arrangement)
-    db.session.commit()
-
-    return redirect(url_for('main.arrangements'))
-
-
-@main.route('/delete_arrangement/<arrangement_id>')
-@login_required
-@requires_account_types('ADMIN')
-def delete_arrangement(arrangement_id):
-    arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
-    reservation = Reservation.query.filter_by(arrangement_id=arrangement.id).first()
-    db.session.delete(reservation)
-    db.session.delete(arrangement)
-    db.session.commit()
-    return redirect(url_for('main.arrangements'))
+        return return_message_to_client('PUT is only allowed method for canceling the arrangement', 405)
 
 
 @main.route('/reservations')
-@login_required
 def reservations():
     destination = request.args.get('destination')
     start_date = request.args.get('start_date')
@@ -239,7 +248,6 @@ def reservations():
 
 
 @main.route('/create_reservation/<arrangement_id>', methods=['GET', 'POST'])
-@login_required
 def create_reservation(arrangement_id):
     if request.method == 'POST':
         form = request.form
@@ -276,7 +284,6 @@ def create_reservation(arrangement_id):
 
 
 @main.route('/travel_guide_arrangements/<guide_id>')
-@login_required
 def travel_guide_arrangements(guide_id):
     page = request.args.get('page', 1, type=int)
     travel_arrangements = Arrangement.get_travel_guide_arrangements(guide_id, page=page)
@@ -287,7 +294,6 @@ def travel_guide_arrangements(guide_id):
 
 
 @main.route('/tourist_reservations/<tourist_id>')
-@login_required
 def tourist_reservations(tourist_id):
     page = request.args.get('page', 1, type=int)
     tourist_reservations = Reservation.get_tourist_reservations(tourist_id, page=page)
@@ -298,7 +304,6 @@ def tourist_reservations(tourist_id):
 
 
 @main.route('/non_registered_user_page')
-@login_required
 def non_registered_user_page():
     arrangements = Arrangement.get_all_travel_arrangements()
     return render_template('main/non_registered_user_page.html', arrangements=arrangements)
