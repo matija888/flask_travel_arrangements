@@ -4,7 +4,6 @@ from flask import render_template, flash, request, redirect, url_for, current_ap
 from flask_login import login_required, current_user
 from flask_mail import Message
 from sqlalchemy.exc import IntegrityError
-
 from . import main
 from app.models import User, Arrangement, Reservation, ITEM_PER_PAGE
 from app import db, mail
@@ -20,6 +19,41 @@ def index():
     if not current_user.is_authenticated:
         return redirect(url_for('auth.login'))
     return render_template('main/me.html')
+
+
+@main.route('/api/v1.0/users', methods=['GET', 'POST'])
+@authenticated_user
+@requires_account_types('ADMIN')
+def get_all_users():
+    users = User.get_all_json()
+    return jsonify(users)
+
+
+@main.route('/api/v1.0/users/<user_id>', methods=['GET', 'PUT'])
+def edit_user_data(user_id):
+    user = User.query.filter_by(id=user_id).first()
+    if request.method == 'PUT':
+        data = request.json
+        if data:
+            for attr in data:
+                setattr(user, attr, data[attr])
+
+            if 'desired_account_type' in data:
+                user.desired_account_type = data['desired_account_type']
+                user.confirmed_desired_account_type = 'pending'
+
+            db.session.add(user)
+            db.session.commit()
+            msg = 'You have just changed your profile data.'
+            status_code = 200
+        else:
+            msg = "Request that you send does not have any data. Please send json with new value of your data as a user."
+            status_code = 400
+    else:
+        msg = 'Method Not Allowed!'
+        status_code = 405
+
+    return return_message_to_client(msg, status_code)
 
 
 @main.route('/manage_account_type_permission_request/<user_id>/<action>')
@@ -60,24 +94,6 @@ def manage_account_type_permission_request(user_id, action):
     return redirect(url_for('main.admin_panel'))
 
 
-@main.route('/edit_user_data/<user_id>', methods=['GET', 'POST'])
-def edit_user_data(user_id):
-    user = User.query.filter_by(id=user_id).first()
-    if request.method == 'POST':
-        form = request.form
-        user.first_name = form['first_name']
-        user.last_name = form['last_name']
-        user.username = form['username']
-        user.email = form['email']
-        if 'desired_account_type' in form:
-            user.desired_account_type = form['desired_account_type']
-        user.confirmed_desired_account_type = 'pending'
-        db.session.add(user)
-        db.session.commit()
-        flash('You have just changed your profile data.')
-    return render_template('main/edit_user_data.html', user=user)
-
-
 @main.route('/api/v1.0/arrangements', methods=['POST'])
 @requires_account_types('ADMIN')
 def insert_arrangement():
@@ -107,6 +123,15 @@ def insert_arrangement():
         response.status_code = 400
         return response
 
+    # try to find if there is already arrangement in the database
+    arrangement = Arrangement.query.filter_by(
+        destination=json['destination'], description=json['description'],
+        start_date=json['start_date'], end_date=json['end_date']
+    ).first()
+    if arrangement:
+        msg = 'An arrangement which you have just tried to insert already exist in the database.'
+        return return_message_to_client(msg, 400)
+
     arrangement = Arrangement.insert_new_arrangement(
         destination=json['destination'], description=json['description'],
         start_date=json['start_date'], end_date=json['end_date'], number_of_persons=json['number_of_persons'],
@@ -130,7 +155,7 @@ def arrangements():
 
 
 @main.route('/api/v1.0/arrangements/<arrangement_id>', methods=['PUT'])
-def edit_arrangement(arrangement_id):
+def update_arrangement(arrangement_id):
     arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
     if arrangement is None:
         msg = 'Arrangement that you are trying to update does not exist!'
@@ -142,7 +167,7 @@ def edit_arrangement(arrangement_id):
 
     five_days_after_today = date.today() + timedelta(days=5)
     if five_days_after_today > arrangement.start_date:
-        msg = f'It is too late to edit {arrangement.id} because start date of the arrangement is {arrangement.start_date}.'
+        msg = f'It is too late to edit arrangement id={arrangement.id} because start date of the arrangement is {arrangement.start_date}.'
         return return_message_to_client(msg, 404)
 
     if request.method == 'PUT':
@@ -209,78 +234,53 @@ def cancel_arrangement(arrangement_id):
         return return_message_to_client('PUT is only allowed method for canceling the arrangement', 405)
 
 
-@main.route('/reservations')
+@main.route('/api/v1.0/reservations', methods=['GET'])
+@authenticated_user
+@requires_account_types('ADMIN', 'TOURIST')
 def reservations():
-    destination = request.args.get('destination')
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-
-    arrangements_page = request.args.get('arrangements_page', 1, type=int)
-    arrangements = Arrangement.get_all_unbooked_arrangements(
-        page=arrangements_page, destination=destination, start_date=start_date, end_date=end_date
+    page = int(request.args.get('page', 1))
+    columns_order = request.args.get('columns_order', 'id asc')
+    reservations = Reservation.get_reservations(
+        page=page, columns_order=columns_order
     )
-    arrangements_next_url = arrangements.next_num if arrangements.has_next else None
-    arrangements_prev_url = arrangements.prev_num if arrangements.has_prev else None
-
-    reservations_page = request.args.get('reservations_page', 1, type=int)
-    reservations = Reservation.get_tourist_reservations(current_user.id, page=reservations_page)
-    reservations_next_url = reservations.next_num if reservations.has_next else None
-    reservations_prev_url = reservations.prev_num if reservations.has_prev else None
-
-    return render_template(
-        'main/reservations.html',
-        arrangements=arrangements.items,
-        reservations=reservations.items,
-
-        arrangements_next_url=url_for('main.reservations', arrangements_page=arrangements_next_url),
-        arrangements_prev_url=url_for('main.reservations', arrangements_page=arrangements_prev_url),
-
-        reservations_next_url=url_for('main.reservations', reservations_page=reservations_next_url),
-        reservations_prev_url=url_for('main.reservations', reservations_page=reservations_prev_url),
-
-        arrangements_has_next=arrangements.has_next, arrangements_has_prev=arrangements.has_prev,
-        reservations_has_next=reservations.has_next, reservations_has_prev=reservations.has_prev,
-
-        item_per_page=ITEM_PER_PAGE,
-        arrangements_page=arrangements_page,
-        reservations_page=reservations_page
-    )
+    return jsonify(reservations)
 
 
-@main.route('/create_reservation/<arrangement_id>', methods=['GET', 'POST'])
-def create_reservation(arrangement_id):
-    if request.method == 'POST':
-        form = request.form
-        number_of_persons = int(form['number_of_persons'])
-        arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
-        if number_of_persons > arrangement.number_of_persons:
-            flash('You cannot book reservation with number of persons greater than arrangement number of persons.')
-            return redirect(url_for('main.create_reservation', arrangement_id=arrangement_id))
-        elif number_of_persons > (arrangement.number_of_persons - arrangement.reserved_number_of_persons):
-            # there is no available places for this arrangement
-            flash('You cannot reserve more than currently available places for this arrangement.', 'error')
-            return redirect(url_for('main.create_reservation', arrangement_id=arrangement_id))
-        else:
-            reservation = Reservation.create_reservation(arrangement, current_user.id, number_of_persons)
-
-            Arrangement.book_reservation(arrangement_id=reservation.arrangement_id, number_of_persons=number_of_persons)
-
-            flash(f'You have successfully created reservation for {arrangement.description}')
-            try:
-                msg = Message(
-                    f"Reservation for travel {arrangement.description} successfully created",
-                    recipients=[current_user.email]
-                )
-                msg.body = render_template(
-                    'mail/created_reservation.txt', current_user=current_user, reservation=reservation
-                )
-                mail.send(msg)
-            except Exception as e:
-                print(e)
-        return redirect(url_for('main.reservations'))
+@main.route('/api/v1.0/reservations', methods=['POST'])
+@authenticated_user
+@requires_account_types('TOURIST')
+def create_reservation():
+    data = request.json
+    number_of_persons = int(data['number_of_persons'])
+    arrangement_id = int(data['arrangement_id'])
+    arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
+    if number_of_persons > arrangement.number_of_persons:
+        msg = 'You cannot book reservation with number of persons greater than arrangement number of persons.'
+        status_code = 400
+    elif number_of_persons > (arrangement.number_of_persons - arrangement.reserved_number_of_persons):
+        # there is no available places for this arrangement
+        msg = 'You cannot reserve more than currently available places for this arrangement.'
+        status_code = 400
     else:
-        arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
-        return render_template('main/create_reservation.html', arrangement=arrangement)
+        reservation = Reservation.create_reservation(arrangement, current_user.id, number_of_persons)
+
+        Arrangement.book_reservation(arrangement_id=reservation.arrangement_id, number_of_persons=number_of_persons)
+
+        msg = f'You have successfully created reservation id {reservation.id}'
+        status_code = 201
+        try:
+            email_msg = Message(
+                f"Reservation for travel {arrangement.description} successfully created",
+                recipients=[current_user.email]
+            )
+            email_msg.body = render_template(
+                'mail/created_reservation.txt', current_user=current_user, reservation=reservation
+            )
+            mail.send(email_msg)
+        except Exception as e:
+            print(e)
+            msg += ' but notification mail cannot be sent!'
+    return return_message_to_client(msg, status_code)
 
 
 @main.route('/travel_guide_arrangements/<guide_id>')

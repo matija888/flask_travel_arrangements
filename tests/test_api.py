@@ -97,8 +97,8 @@ class TestAPI(TestCase):
                 '/api/v1.0/arrangements', json={
                     'destination': 'Test destination',
                     'description': 'Test desc',
-                    'start_date': '01.{}.2021'.format(month),
-                    'end_date': '15.{}.2021'.format(month),
+                    'start_date': '01.{}.2022'.format(month),
+                    'end_date': '15.{}.2022'.format(month),
                     'number_of_persons': 2,
                     'price': 100.88
                 }
@@ -163,7 +163,7 @@ class TestAPI(TestCase):
         self.assertEqual(response.status_code, 405)
 
         response = self.client.post(
-            '/auth/api/v1.0/register', data=dict(
+            '/auth/api/v1.0/register', json=dict(
                 first_name='Test', last_name='User 2', email='test@user.com', username='test_user',
                 password='test', confirm_password='test', desired_account_type='ADMIN'
             )
@@ -176,7 +176,7 @@ class TestAPI(TestCase):
 
         # PASSWORD and CONFIRMED password DO NOT MATCH
         response = self.client.post(
-            '/auth/api/v1.0/register', data=dict(
+            '/auth/api/v1.0/register', json=dict(
                 first_name='Test', last_name='User 2', email='test@user.com', username='john',
                 password='pass', confirm_password='conf_pass', desired_account_type='ADMIN'
             )
@@ -189,7 +189,7 @@ class TestAPI(TestCase):
 
         # PASSWORD and CONFIRMED password MATCH
         response = self.client.post(
-            '/auth/api/v1.0/register', data=dict(
+            '/auth/api/v1.0/register', json=dict(
                 first_name='Test', last_name='User 2', email='test@user.com', username='john',
                 password='pass', confirm_password='pass', desired_account_type='ADMIN'
             )
@@ -202,7 +202,7 @@ class TestAPI(TestCase):
 
     def test_insert_travel_guide(self):
         response = self.client.post(
-            '/auth/api/v1.0/register', data=dict(
+            '/auth/api/v1.0/register', json=dict(
                 first_name='Travel', last_name='Guide', email='travel@guide.com', username='guide',
                 password='guide', confirm_password='guide', desired_account_type='TRAVEL GUIDE'
             )
@@ -215,7 +215,7 @@ class TestAPI(TestCase):
 
     def test_insert_travel_admin(self):
         response = self.client.post(
-            '/auth/api/v1.0/register', data=dict(
+            '/auth/api/v1.0/register', json=dict(
                 first_name='Travel', last_name='admin', email='admin@admin.com', username='admin',
                 password='admin', confirm_password='admin', desired_account_type='ADMIN'
             )
@@ -243,25 +243,54 @@ class TestAPI(TestCase):
         # send PUT request with data (except travel_guide_id)
         updated_destination = 'Destination updated'
         updated_description = 'Description updated'
-        updated_start_date = '01.01.2022'
-        updated_end_date = '15.01.2022'
-        response = self.client.put('/api/v1.0/arrangements/5', json=dict(
+        updated_start_date = '01.01.2021'
+        updated_end_date = '15.01.2021'
+        response = self.client.put('/api/v1.0/arrangements/4', json=dict(
             destination=updated_destination, description=updated_description,
             start_date=updated_start_date, end_date=updated_end_date
         ))
         self.assertEqual(response.status_code, 200)
-        arrangement = Arrangement.query.filter_by(id=5).first()
+        arrangement = Arrangement.query.filter_by(id=4).first()
         self.assertEqual(arrangement.destination, updated_destination)
         self.assertEqual(arrangement.description, updated_description)
         self.assertEqual(arrangement.start_date.strftime('%d.%m.%Y'), updated_start_date)
         self.assertEqual(arrangement.end_date.strftime('%d.%m.%Y'), updated_end_date)
         self.assertEqual(arrangement.travel_guide_id, None)
 
+        # try to update arrangement with start date in the next 5 days
+        response = self.client.put('/api/v1.0/arrangements/4', json=dict(
+            destination=updated_destination, description=updated_description,
+            start_date=updated_start_date, end_date=updated_end_date
+        ))
+        msg = 'It is too late to edit arrangement id=4 because start date of the arrangement is 01.01.2021.'
+        self.assert404(response, message=msg)
+
+        # change creator of the arrangement with id=5
+        arrangement = Arrangement.query.filter_by(id=5).first()
+        arrangement.created_by = 2
+        db.session.add(arrangement)
+        db.session.commit()
+        # try to change arrangement which is created by another user
+        response = self.client.put('/api/v1.0/arrangements/5', json=dict(
+            destination=updated_destination, description=updated_description,
+            start_date=updated_start_date, end_date=updated_end_date
+        ))
+        msg = 'Only creator of the arrangement id 5 can update it!'
+        self.assert404(response, message=msg)
+
+    @unittest.mock.patch('flask_login.utils._get_user')
+    def test_update_someone_else_arrangement(self, current_user):
+        mock_current_user = MagicMock()
+        mock_current_user.id = 1
+        current_user.return_value = mock_current_user
+
+        self.test_insert_9_arrangements()
+
         # send PUT request with data (INCLUDING travel_guide_id)
         with self.assertRaises(IntegrityError):
             response = self.client.put('/api/v1.0/arrangements/5', json=dict(
-                destination=updated_destination, description=updated_description,
-                start_date=updated_start_date, end_date=updated_end_date, travel_guide_id=3
+                destination='', description='',
+                start_date='01.05.2022', end_date='10.05.2022', travel_guide_id=3
             ))
             msg = 'You are trying to assign travel_guide who does not exist in the database.'
             print(response)
@@ -290,6 +319,38 @@ class TestAPI(TestCase):
         # PUT is ALLOWED method
         response = self.client.put('/api/v1.0/cancel_arrangement/1')
         self.assert200(response)
+
+    def test_reservations(self):
+        self.client.get('/reservations')
+
+    def test_get_all_users(self):
+        self.test_insert_travel_guide()
+        self.test_insert_travel_admin()
+        response = self.client.get('/api/v1.0/users')
+        self.assert200(response)
+        self.assertEqual(len(response.json), 2)
+
+    def test_update_user(self):
+        self.test_insert_travel_guide()
+        self.test_insert_travel_admin()
+
+        # send GET request which is not allowed
+        response = self.client.get('/api/v1.0/users/2')
+        msg = "Request that you send does not have any data. Please send json with new value of your data as a user."
+        self.assert405(response, msg)
+
+        # send PUT request without any data
+        response = self.client.put('/api/v1.0/users/2')
+        msg = "Request that you send does not have any data. Please send json with new value of your data as a user."
+        self.assert400(response, msg)
+
+        # send correct PUT request
+        response = self.client.put('/api/v1.0/users/2', json=dict(
+            username='updated_username', desired_account_type='ADMIN'
+        ))
+        self.assert200(response)
+        user = User.query.filter_by(id=2).first()
+        self.assertEqual(user.username, 'updated_username')
 
 
 if __name__ == '__main__':

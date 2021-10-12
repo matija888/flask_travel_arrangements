@@ -180,11 +180,12 @@ class User(db.Model, UserMixin, DatabaseObject):
 
 
 class UserSchema(Schema):
-    id =fields.Int()
+    id = fields.Int()
     first_name = fields.Str()
     last_name = fields.Str()
     email = fields.Str()
     username = fields.Str()
+    account_type = fields.Str()
 
 
 class Arrangement(db.Model, DatabaseObject):
@@ -359,7 +360,14 @@ class ArrangementSchema(Schema):
     price = fields.Decimal(as_string=True)
 
 
-class Reservation(db.Model):
+class ReservationsSchema(Schema):
+    arrangement = fields.Nested(ArrangementSchema)
+    user = fields.Nested(UserSchema, exclude=('id', 'email', 'username'))
+    number_of_persons = fields.Int()
+    price = fields.Str()
+
+
+class Reservation(db.Model, DatabaseObject):
     __tablename__ = 'reservation'
     id = db.Column(db.Integer, primary_key=True)
     arrangement_id = db.Column(db.Integer, db.ForeignKey('arrangement.id'), nullable=False)
@@ -391,13 +399,21 @@ class Reservation(db.Model):
         return reservation
 
     @classmethod
-    def get_all_reservations(cls):
-        return cls.query.all()
-
-    @classmethod
-    def get_tourist_reservations(cls, tourist_id, **kwargs):
+    def get_reservations(cls, **kwargs):
         page = kwargs.pop('page', '')
         page = 1 if not page else page
-        return cls.query.join(Arrangement)\
-            .filter(Arrangement.status == 'active', cls.user_id == tourist_id).paginate(page, ITEM_PER_PAGE, False)
+        columns_order = kwargs.pop('columns_order') if 'columns_order' in kwargs else None
+        if current_user.account_type == 'ADMIN':
+            objs = cls.query \
+                .order_by(text(columns_order)) \
+                .paginate(page, ITEM_PER_PAGE, False) \
+                .items
+        elif current_user.account_type == 'TOURIST':
+            objs = cls.query \
+                .filter(cls.user_id == current_user.id) \
+                .order_by(text(columns_order)) \
+                .paginate(page, ITEM_PER_PAGE, False) \
+                .items
+        return cls.convert_object_to_json_string(ReservationsSchema(), objs)
+
 
