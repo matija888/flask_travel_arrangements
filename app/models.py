@@ -4,7 +4,7 @@ import datetime
 
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, current_user
-from sqlalchemy import and_, or_, text
+from sqlalchemy import and_, or_, text, desc
 from marshmallow import Schema, fields
 
 from app import db, login_manager
@@ -62,7 +62,10 @@ class User(db.Model, UserMixin, DatabaseObject):
         return check_password_hash(self.password_hash, password)
 
     @classmethod
-    def get_pending_account_type_requests(cls):
+    def get_pending_account_type_requests(cls, **kwargs):
+        page = kwargs.pop('page', '')
+        page = 1 if not page else page
+
         non_pending_users_list_of_tuples = cls.query.with_entities(cls.id).filter(
             or_(
                 and_(
@@ -82,15 +85,15 @@ class User(db.Model, UserMixin, DatabaseObject):
         non_pending_users_list = [user_id for (user_id, ) in non_pending_users_list_of_tuples]
 
         return [
-            user
-            for user in cls.query.all()
+            UserSchema().dump(user)
+            for user in cls.query.paginate(page, ITEM_PER_PAGE, False).items
             if user.id not in non_pending_users_list and user.confirmed_desired_account_type not in [
                 'approve', 'reject'
             ]
         ]
 
     @classmethod
-    def get_available_travel_guides_ids(cls, start_travel_date, end_travel_date):
+    def get_available_travel_guides(cls, start_travel_date, end_travel_date):
         """"
             :param start_travel_date
             :param end_travel_date
@@ -150,6 +153,18 @@ class User(db.Model, UserMixin, DatabaseObject):
         return available_guides
 
     @classmethod
+    def get_available_travel_guides_json(cls, start_travel_date, end_travel_date):
+        available_guides = cls.get_available_travel_guides(start_travel_date, end_travel_date)
+        return cls.convert_object_to_json_string(UserSchema(), available_guides)
+
+    @classmethod
+    def get_available_travel_guides_ids(cls, start_travel_date, end_travel_date):
+        available_travel_guides = cls.get_available_travel_guides(
+            start_travel_date=start_travel_date, end_travel_date=end_travel_date
+        )
+        return [guide.id for guide in available_travel_guides]
+
+    @classmethod
     def get_all_users(cls, **kwargs):
         account_type = kwargs.pop('account_type', '')
         page = kwargs.pop('page', '')
@@ -178,6 +193,32 @@ class User(db.Model, UserMixin, DatabaseObject):
         objs_json = cls.convert_object_to_json_string(schema, objs)
         return objs_json
 
+    @classmethod
+    def get_user_by_id(cls, user_id):
+        user = User.query.filter_by(id=user_id).first()
+        return UserSchema().dump(user)
+
+    def update_data(self, **json):
+        """"
+            :return True if everything is updated correctly
+            False if user did not send correctly desired account name
+            None if TRAVEL GUIDE try to change their account type to TOURIST
+        """
+        for attr in json:
+            value = json[attr]
+            if hasattr(self, attr) and value != '':
+                if attr == 'desired_account_type':
+                    if json[attr] not in ['ADMIN', 'TOURIST', 'TRAVEL GUIDE']:
+                        return False
+                    else:
+                        if current_user.account_type == 'TRAVEL GUIDE' and json[attr] == 'TOURIST':
+                            return None
+                        self.confirmed_desired_account_type = 'pending'
+                setattr(self, attr, value)
+        db.session.add(self)
+        db.session.commit()
+        return True
+
 
 class UserSchema(Schema):
     id = fields.Int()
@@ -186,6 +227,7 @@ class UserSchema(Schema):
     email = fields.Str()
     username = fields.Str()
     account_type = fields.Str()
+    desired_account_type = fields.Str()
 
 
 class Arrangement(db.Model, DatabaseObject):
@@ -205,16 +247,22 @@ class Arrangement(db.Model, DatabaseObject):
     guide = db.relationship('User', foreign_keys=[travel_guide_id], backref='arrangement')
 
     @classmethod
+    def get_basic_arrangements_info(cls):
+        arrangements = cls.query.all()
+        return cls.convert_object_to_json_string(ArrangementBasicInfoSchema(), arrangements)
+
+    @classmethod
     def get_all_unbooked_arrangements(cls, **kwargs):
         page = kwargs.pop('page', '')
         page = 1 if not page else page
+
         destination = kwargs.pop('destination', '')
         start_date = kwargs.pop('start_date', '')
         end_date = kwargs.pop('end_date', '')
-        # Set the pagination configuration
+
         five_days_after_today = date.today() + timedelta(days=5)
         if destination and start_date and end_date:
-            return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
+            arrangements = cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
                 cls.status == 'active',
                 Arrangement.start_date >= five_days_after_today
             ).filter(cls.destination.ilike(f'%{destination}%'))\
@@ -246,16 +294,16 @@ class Arrangement(db.Model, DatabaseObject):
                         )
                     )
                 ).order_by(Arrangement.start_date)\
-                .paginate(page, ITEM_PER_PAGE, False)
+                .paginate(page, ITEM_PER_PAGE, False).items
         elif destination:
-            return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
+            arrangements = cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
                 cls.status == 'active',
                 Arrangement.start_date > five_days_after_today
             ).filter(cls.destination.ilike(f'%{destination}%')) \
                 .order_by(Arrangement.start_date) \
-                .paginate(page, ITEM_PER_PAGE, False)
+                .paginate(page, ITEM_PER_PAGE, False).items
         elif start_date and end_date:
-            return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
+            arrangements = cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
                 cls.status == 'active',
                 Arrangement.start_date >= five_days_after_today
             ).filter(
@@ -286,12 +334,14 @@ class Arrangement(db.Model, DatabaseObject):
                     )
                 )
             ).order_by(Arrangement.start_date) \
-                .paginate(page, ITEM_PER_PAGE, False)
+                .paginate(page, ITEM_PER_PAGE, False).items
         else:
-            return cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
+            arrangements = cls.query.join(Reservation, Reservation.arrangement_id == cls.id, isouter=True).filter(
                 cls.status == 'active',
                 Arrangement.start_date > five_days_after_today
-            ).order_by(Arrangement.start_date).paginate(page, ITEM_PER_PAGE, False)
+            ).order_by(Arrangement.start_date).paginate(page, ITEM_PER_PAGE, False).items
+
+        return cls.convert_object_to_json_string(ArrangementSchema(), arrangements)
 
     @classmethod
     def get_travel_guide_arrangements(cls, guide_id, **kwargs):
@@ -299,23 +349,69 @@ class Arrangement(db.Model, DatabaseObject):
         page = 1 if not page else page
         columns_order = kwargs.pop('columns_order') if 'columns_order' in kwargs else None
         if columns_order:
-            return cls.query.filter_by(travel_guide_id=guide_id).order_by(text(columns_order)) \
-                .paginate(page, ITEM_PER_PAGE, False)
+            guide_arrangements = cls.query.filter_by(travel_guide_id=guide_id).order_by(text(columns_order)) \
+                .paginate(page, ITEM_PER_PAGE, False).items
         else:
-            return cls.query.filter_by(travel_guide_id=guide_id).paginate(page, ITEM_PER_PAGE, False)
+            guide_arrangements = cls.query.filter_by(travel_guide_id=guide_id).paginate(page, ITEM_PER_PAGE, False).items
+
+        return cls.convert_object_to_json_string(ArrangementSchema(), guide_arrangements)
 
     @classmethod
     def get_all_travel_arrangements(cls, **kwargs):
+        """"
+            :return list of arrangements objects in JSON depending of who is currently logged in user
+                or
+                None: if columns_order is string which does not have two values (column_name and order type asc/desc)
+                then inform user that they need to send correct url argument in order to sort arrangements
+        """
+        columns_order = kwargs.pop('columns_order') if 'columns_order' in kwargs else None
+        if columns_order is not None and len(columns_order.split(' ')) != 2:
+            return None
+
         page = kwargs.pop('page', '')
         page = 1 if not page else page
-        columns_order = kwargs.pop('columns_order') if 'columns_order' in kwargs else None
-        creator_id = kwargs.pop('creator_id') if 'creator_id' in kwargs else None
 
-        if columns_order:
-            objs = cls.query.order_by(text(columns_order)).paginate(page, ITEM_PER_PAGE, False).items
-        else:
-            # sort by start_date ASC by default
-            objs = cls.query.order_by(cls.start_date).paginate(page, ITEM_PER_PAGE, False).items
+        if current_user.account_type in ['ADMIN', 'TRAVEL GUIDE']:
+            if columns_order:
+                objs = cls.query.order_by(text(columns_order)).paginate(page, ITEM_PER_PAGE, False).items
+            else:
+                # sort by start_date ASC by default
+                objs = cls.query.order_by(cls.start_date).paginate(page, ITEM_PER_PAGE, False).items
+        elif current_user.account_type == 'TOURIST':
+            if columns_order:
+                column = columns_order.split(' ')[0] if columns_order is not None else columns_order
+                order = columns_order.split(' ')[1] if columns_order is not None else columns_order
+                if hasattr(cls, column):
+                    column = getattr(cls, column)
+                if order == 'desc':
+                    columns_order = desc(column)
+                else:
+                    columns_order = column
+
+                objs = cls.query.join(Reservation, isouter=True) \
+                    .filter(
+                        or_(
+                            Reservation.user_id == None,
+                            Reservation.user_id != current_user.id
+                        ),
+                        cls.start_date >= date.today() + timedelta(days=5)
+                    ) \
+                    .order_by(columns_order)\
+                    .paginate(page, ITEM_PER_PAGE, False)\
+                    .items
+            else:
+                # sort by start_date ASC by default
+                objs = cls.query.join(Reservation, isouter=True) \
+                    .filter(
+                        or_(
+                            Reservation.user_id == None,
+                            Reservation.user_id != current_user.id
+                        ),
+                        cls.start_date >= date.today() + timedelta(days=5)
+                    ) \
+                    .order_by(cls.start_date)\
+                    .paginate(page, ITEM_PER_PAGE, False)\
+                    .items
 
         return cls.convert_object_to_json_string(ArrangementSchema(), objs)
 
@@ -350,6 +446,13 @@ class Arrangement(db.Model, DatabaseObject):
         return schema.dump(obj)
 
 
+class ArrangementBasicInfoSchema(Schema):
+    id = fields.Int()
+    destination = fields.Str()
+    description = fields.Str()
+    start_date = fields.Date()
+    end_date = fields.Date()
+
 class ArrangementSchema(Schema):
     id = fields.Int()
     destination = fields.Str()
@@ -358,6 +461,7 @@ class ArrangementSchema(Schema):
     end_date = fields.Date()
     number_of_persons = fields.Int()
     price = fields.Decimal(as_string=True)
+    guide = fields.Nested(UserSchema)
 
 
 class ReservationsSchema(Schema):

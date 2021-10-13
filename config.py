@@ -23,6 +23,7 @@ class Config(object):
 
 class DevelopmentConfig(Config):
     LOGIN_DISABLED = False
+    TESTING = False
 
 
 class TestingConfig(Config):

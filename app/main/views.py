@@ -1,11 +1,11 @@
 from datetime import date, timedelta
 
-from flask import render_template, flash, request, redirect, url_for, current_app, jsonify, abort
-from flask_login import login_required, current_user
+from flask import render_template, request, jsonify
+from flask_login import current_user
 from flask_mail import Message
 from sqlalchemy.exc import IntegrityError
 from . import main
-from app.models import User, Arrangement, Reservation, ITEM_PER_PAGE
+from app.models import User, Arrangement, Reservation
 from app import db, mail
 from app.decorators import requires_account_types, authenticated_user
 
@@ -14,14 +14,12 @@ def return_message_to_client(message, status_code):
     return jsonify({'message': message}), status_code
 
 
-@main.route('/')
-def index():
-    if not current_user.is_authenticated:
-        return redirect(url_for('auth.login'))
-    return render_template('main/me.html')
+@main.app_errorhandler(405)
+def method_not_allowed(e):
+    return return_message_to_client('Method Not Allowed!', 405)
 
 
-@main.route('/api/v1.0/users', methods=['GET', 'POST'])
+@main.route('/api/v1.0/users', methods=['GET'])
 @authenticated_user
 @requires_account_types('ADMIN')
 def get_all_users():
@@ -29,37 +27,60 @@ def get_all_users():
     return jsonify(users)
 
 
-@main.route('/api/v1.0/users/<user_id>', methods=['GET', 'PUT'])
-def edit_user_data(user_id):
-    user = User.query.filter_by(id=user_id).first()
-    if request.method == 'PUT':
-        data = request.json
-        if data:
-            for attr in data:
-                setattr(user, attr, data[attr])
-
-            if 'desired_account_type' in data:
-                user.desired_account_type = data['desired_account_type']
-                user.confirmed_desired_account_type = 'pending'
-
-            db.session.add(user)
-            db.session.commit()
-            msg = 'You have just changed your profile data.'
-            status_code = 200
-        else:
-            msg = "Request that you send does not have any data. Please send json with new value of your data as a user."
+@main.route('/api/v1.0/my_data', methods=['GET', 'PUT'])
+@authenticated_user
+def my_data():
+    print(request.json)
+    if request.json is None:
+        msg = 'Request that you send does not have any data. '
+        msg += 'Please send json with new value of your data as a user.'
+        return return_message_to_client(msg, 400)
+    user = User.get_user_by_id(current_user.id)
+    if request.method == 'GET':
+        return jsonify(user)
+    elif request.method == 'PUT':
+        # change user's data
+        user = User.query.filter_by(id=current_user.id).first()
+        updated_all_fields = user.update_data(**request.json)
+        if updated_all_fields is False:
+            msg = 'Please chose one of the following desired_account_type: ADMIN, TOURIST, TRAVEL GUIDE.'
             status_code = 400
-    else:
-        msg = 'Method Not Allowed!'
-        status_code = 405
+        if updated_all_fields is None:
+            msg = 'TRAVEL GUIDE cannot send request for changing their account type to TOURIST.'
+            status_code = 400
+        else:
+            msg = 'You have successfully changed your data.'
+            status_code = 200
 
     return return_message_to_client(msg, status_code)
 
 
-@main.route('/manage_account_type_permission_request/<user_id>/<action>')
+@main.route('/api/v1.0/account_type_requests', methods=['GET'])
+@authenticated_user
+@requires_account_types('ADMIN')
+def account_type_requests():
+    page = int(request.args.get('page', 1))
+    requests = User.get_pending_account_type_requests(page=page)
+    return jsonify(requests)
+
+
+@main.route('/api/v1.0/account_type_requests/<user_id>/<action>', methods=['PUT'])
+@authenticated_user
+@requires_account_types('ADMIN')
 def manage_account_type_permission_request(user_id, action):
+
+    if action not in ['approved', 'rejected']:
+        msg = 'You need to use /<user/approved or <user_id>/rejected as arguments in order to resolve the request.'
+        status_code = 400
+        return return_message_to_client(msg, status_code)
+
     user = User.query.filter_by(id=user_id).first()
     if user:
+
+        if user.account_type == user.desired_account_type:
+            msg = 'This user did not send request or their request has been already resolved.'
+            status_code = 400
+            return return_message_to_client(msg, status_code)
 
         previous_account_type = user.account_type  # store this info in order to revert back if mail is not sent
         previous_confirmed_desired_account_type = user.confirmed_desired_account_type  # same as previous acc type
@@ -67,31 +88,48 @@ def manage_account_type_permission_request(user_id, action):
         if action == 'approved':
             user.account_type = user.desired_account_type
             user.confirmed_desired_account_type = 'approve'
-            flash(f'You have just approved request from {user.first_name} {user.last_name} '
-                  f'to give them {user.desired_account_type} permissions.')
+            msg = f'You have just approved request from {user.first_name} {user.last_name} '
+            msg += f' to give them {user.desired_account_type} permissions.'
         elif action == 'rejected':
             user.confirmed_desired_account_type = 'reject'
-            flash(
-                f'You have just rejected request from {user.first_name} {user.last_name} '
-                f'to give them {user.desired_account_type} permissions.'
-            )
-
+            msg = f'You have just rejected request from {user.first_name} {user.last_name} '
+            msg += f'to give them {user.desired_account_type} permissions.'
         try:
-            msg = Message(
+            message = Message(
                 f"{action.capitalize()} {user.desired_account_type} account type",
                 recipients=[user.email]
             )
-            msg.body = render_template(
+            message.body = render_template(
                 'mail/account_type_request.txt', user=user, action=action
             )
-            mail.send(msg)
+            mail.send(message)
         except Exception as e:
             user.account_type = previous_account_type
             user.confirmed_desired_account_type = previous_confirmed_desired_account_type
             print(e)
     db.session.add(user)
     db.session.commit()
-    return redirect(url_for('main.admin_panel'))
+    status_code = 200
+
+    return return_message_to_client(msg, status_code)
+
+
+@main.route('/api/v1.0/arrangements', methods=['GET'])
+def arrangements():
+    if current_user.is_anonymous:
+        arrangements = Arrangement.get_basic_arrangements_info()
+        return jsonify(arrangements)
+    page = int(request.args.get('page', 1))
+    columns_order = request.args.get('columns_order')
+    creator_id = request.args.get('creator_id')  # TODO: Put in creator_id currently logged in user
+    creator_id = 1
+
+    arrangements = Arrangement.get_all_travel_arrangements(page=page, columns_order=columns_order)
+    if arrangements is None:
+        # user did not send correct sort by argument
+        msg = 'If you want to sort arrangements please use ?columns_order=column_name asc/desc'
+        return return_message_to_client(msg, 400)
+    return jsonify(arrangements)
 
 
 @main.route('/api/v1.0/arrangements', methods=['POST'])
@@ -140,28 +178,16 @@ def insert_arrangement():
     return arrangement, 201
 
 
-@main.route('/api/v1.0/arrangements', methods=['GET'])
-@authenticated_user
-def arrangements():
-    page = int(request.args.get('page', 1))
-    columns_order = request.args.get('columns_order')
-    creator_id = request.args.get('creator_id')  # TODO: Put in creator_id currently logged in user
-    creator_id = 1
-
-    arrangements = Arrangement.get_all_travel_arrangements(
-        page=page, columns_order=columns_order, creator_id=creator_id
-    )
-    return jsonify(arrangements)
-
-
 @main.route('/api/v1.0/arrangements/<arrangement_id>', methods=['PUT'])
+@authenticated_user
+@requires_account_types('ADMIN', 'TRAVEL GUIDE')
 def update_arrangement(arrangement_id):
     arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
     if arrangement is None:
         msg = 'Arrangement that you are trying to update does not exist!'
         return return_message_to_client(msg, 404)
 
-    if arrangement.created_by != current_user.id:
+    if current_user.account_type == 'ADMIN' and arrangement.created_by != current_user.id:
         msg = f'Only creator of the arrangement id {arrangement.id} can update it!'
         return return_message_to_client(msg, 404)
 
@@ -170,17 +196,28 @@ def update_arrangement(arrangement_id):
         msg = f'It is too late to edit arrangement id={arrangement.id} because start date of the arrangement is {arrangement.start_date}.'
         return return_message_to_client(msg, 404)
 
-    if request.method == 'PUT':
-        data = request.json
-        if not data:
-            return return_message_to_client('You need to send json data in order to update arrangement.', 400)
+    data = request.json
+    if not data:
+        return return_message_to_client('You need to send json data in order to update arrangement.', 400)
 
+    if current_user.account_type == 'ADMIN':
         for field in data:
             if hasattr(arrangement, field):
                 if field == 'travel_guide_id':
                     # if travel guide is chosen in insert a new travel arrangement use that value
                     # if user did not chose travel guide that means that we get 'None' string from the client
                     travel_guide_id = data['travel_guide_id'] if data['travel_guide_id'] != 'None' else None
+
+                    # check to see if travel guide is available
+                    available_guides_ids = User.get_available_travel_guides_ids(
+                        start_travel_date=arrangement.start_date, end_travel_date=arrangement.end_date
+                    )
+                    if travel_guide_id not in available_guides_ids:
+                        guide = User.query.filter_by(id=travel_guide_id).first()
+                        msg = f'Travel guide {guide.first_name} {guide.last_name} is not available in this period.'
+                        msg += 'Check available guides at /api/v1.0/available_guides route with GET method'
+                        return return_message_to_client(msg, 400)
+
                     try:
                         setattr(arrangement, 'travel_guide_id', travel_guide_id)
                     except IntegrityError as e:
@@ -190,48 +227,86 @@ def update_arrangement(arrangement_id):
                         return return_message_to_client(msg, 400)
                 else:
                     setattr(arrangement, field, data[field])
+    elif current_user.account_type == 'TRAVEL GUIDE':
+        if arrangement.travel_guide_id != current_user.id:
+            msg = 'You do not have permission to edit this arrangement.'
+            msg += 'You can only edit arrangement where you are assigned to be a travel guide.'
+            return return_message_to_client(msg, 400)
+        if 'description' not in data:
+            msg = 'You only have permission to edit description of this arrangement.'
+            return return_message_to_client(msg, 400)
 
-        db.session.add(arrangement)
-        db.session.commit()
-        msg = f'You have just successfully changed data for the travel arrangement id {arrangement.id}'
-        return return_message_to_client(msg, 200)
+    db.session.add(arrangement)
+    db.session.commit()
+    msg = f'You have just successfully changed data for the travel arrangement id {arrangement.id}'
+    return return_message_to_client(msg, 200)
 
 
-@main.route('/api/v1.0/cancel_arrangement/<arrangement_id>', methods=['PUT', 'GET', 'POST'])
+@main.route('/api/v1.0/search_arrangements', methods=['GET'])
+@authenticated_user
+def search_arrangements():
+    arrangements = Arrangement.get_all_unbooked_arrangements(**request.args)
+    return jsonify(arrangements)
+
+
+@main.route('/api/v1.0/cancel_arrangement/<arrangement_id>', methods=['PUT'])
 @authenticated_user
 @requires_account_types('ADMIN')
 def cancel_arrangement(arrangement_id):
-    if request.method == 'PUT':
-        arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
-        if arrangement is None:
-            msg = 'Arrangement that you are trying to cancel does not exist!'
-            return return_message_to_client(msg, 404)
-        if arrangement.reservations:
-            # send email notification only if there is some reservation for this arrangement
-            for reservation in arrangement.reservations:
-                try:
-                    arrangement.status = 'inactive'
+    arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
+    if arrangement is None:
+        msg = 'Arrangement that you are trying to cancel does not exist!'
+        return return_message_to_client(msg, 404)
+    if arrangement.reservations:
+        # send email notification only if there is some reservation for this arrangement
+        for reservation in arrangement.reservations:
+            try:
+                arrangement.status = 'inactive'
 
-                    # send mail notification to inform tourists that arrangement has been deleted
-                    msg = Message(
-                        f"Travel arrangement ({arrangement.destination} {arrangement.start_date.strftime('%d.%m.%Y')} - {arrangement.end_date.strftime('%d.%m.%Y')}) canceled.",
-                        recipients=[arrangement.reservations[0].user.email]
-                    )
-                    msg.body = render_template('mail/canceled_arrangement.txt', reservation=reservation)
-                    mail.send(msg)
-                except Exception as e:
-                    print(e)
-                    # revert back to active if there is some problem with sending email
-                    arrangement.status = 'active'
-        else:
-            arrangement.status = 'inactive'
-
-        db.session.add(arrangement)
-        db.session.commit()
-
-        return return_message_to_client(f'You have successfully canceled arrangement id {arrangement.id}', 200)
+                # send mail notification to inform tourists that arrangement has been deleted
+                msg = Message(
+                    f"Travel arrangement ({arrangement.destination} {arrangement.start_date.strftime('%d.%m.%Y')} - {arrangement.end_date.strftime('%d.%m.%Y')}) canceled.",
+                    recipients=[arrangement.reservations[0].user.email]
+                )
+                msg.body = render_template('mail/canceled_arrangement.txt', reservation=reservation)
+                mail.send(msg)
+            except Exception as e:
+                print(e)
+                # revert back to active if there is some problem with sending email
+                arrangement.status = 'active'
     else:
-        return return_message_to_client('PUT is only allowed method for canceling the arrangement', 405)
+        arrangement.status = 'inactive'
+
+    db.session.add(arrangement)
+    db.session.commit()
+
+    return return_message_to_client(f'You have successfully canceled arrangement id {arrangement.id}', 200)
+
+
+@main.route('/api/v1.0/available_guides')
+@authenticated_user
+@requires_account_types('ADMIN')
+def available_guides():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    if not start_date or not end_date:
+        # start_date/end_date will be None if there is no args
+        msg = 'You need to send get request by adding start_date and end_date'
+        msg += '-> /api/v1.0/available_guides?start_date=01.10.2021&end_date=01.12.2021'
+        return return_message_to_client(msg, 400)
+    available_guides = User.get_available_travel_guides_json(
+        start_travel_date=start_date, end_travel_date=end_date
+    )
+    return jsonify(available_guides)
+
+
+@main.route('/api/v1.0/travel_guide_arrangements', methods=['GET'])
+@authenticated_user
+@requires_account_types('TRAVEL GUIDE')
+def travel_guide_arrangements():
+    page = request.args.get('page', 1, type=int)
+    guide_arrangements = Arrangement.get_travel_guide_arrangements(current_user.id, page=page)
+    return jsonify(guide_arrangements)
 
 
 @main.route('/api/v1.0/reservations', methods=['GET'])
@@ -251,13 +326,35 @@ def reservations():
 @requires_account_types('TOURIST')
 def create_reservation():
     data = request.json
+
+    for field in ['arrangement_id', 'number_of_persons']:
+        if field not in data:
+            msg = f'You need to send {field} in order to create reservation'
+            return return_message_to_client(msg, 400)
+
     number_of_persons = int(data['number_of_persons'])
     arrangement_id = int(data['arrangement_id'])
     arrangement = Arrangement.query.filter_by(id=arrangement_id).first()
-    if number_of_persons > arrangement.number_of_persons:
-        msg = 'You cannot book reservation with number of persons greater than arrangement number of persons.'
+
+    for reservation in arrangement.reservations:
+        if reservation.user_id == current_user.id:
+            # currently logged in user(tourist) already have reservation for this arrangement
+            msg = f'You already have reservation for this arrangement - {arrangement.destination}'
+            return return_message_to_client(msg, 400)
+
+    # check to see it it is too late to create reservation for this arrangement
+    if date.today() + timedelta(days=5) > arrangement.start_date:
+        msg = "It is too late to create reservation for this arrangement since it starts on "
+        msg += f"{arrangement.start_date.strftime('%d.%m.%Y')}"
         status_code = 400
-    elif number_of_persons > (arrangement.number_of_persons - arrangement.reserved_number_of_persons):
+        return return_message_to_client(msg, status_code)
+
+    unbooked_number_of_reservation = (arrangement.number_of_persons - arrangement.reserved_number_of_persons)
+    if number_of_persons > arrangement.number_of_persons:
+        msg = 'You cannot book reservation with number of persons greater than '
+        msg += f'remaining {unbooked_number_of_reservation} unbooked reservation(places).'
+        status_code = 400
+    elif number_of_persons > unbooked_number_of_reservation:
         # there is no available places for this arrangement
         msg = 'You cannot reserve more than currently available places for this arrangement.'
         status_code = 400
@@ -280,30 +377,5 @@ def create_reservation():
         except Exception as e:
             print(e)
             msg += ' but notification mail cannot be sent!'
+
     return return_message_to_client(msg, status_code)
-
-
-@main.route('/travel_guide_arrangements/<guide_id>')
-def travel_guide_arrangements(guide_id):
-    page = request.args.get('page', 1, type=int)
-    travel_arrangements = Arrangement.get_travel_guide_arrangements(guide_id, page=page)
-    guide = User.query.filter_by(id=guide_id).first()
-    return render_template(
-        'main/travel_guide_arrangements.html', travel_arrangements=travel_arrangements.items, guide=guide
-    )
-
-
-@main.route('/tourist_reservations/<tourist_id>')
-def tourist_reservations(tourist_id):
-    page = request.args.get('page', 1, type=int)
-    tourist_reservations = Reservation.get_tourist_reservations(tourist_id, page=page)
-    tourist = User.query.filter_by(id=tourist_id).first()
-    return render_template(
-        'main/tourist_reservations.html', tourist_reservations=tourist_reservations.items, tourist=tourist
-    )
-
-
-@main.route('/non_registered_user_page')
-def non_registered_user_page():
-    arrangements = Arrangement.get_all_travel_arrangements()
-    return render_template('main/non_registered_user_page.html', arrangements=arrangements)

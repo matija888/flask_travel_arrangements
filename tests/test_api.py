@@ -293,7 +293,6 @@ class TestAPI(TestCase):
                 start_date='01.05.2022', end_date='10.05.2022', travel_guide_id=3
             ))
             msg = 'You are trying to assign travel_guide who does not exist in the database.'
-            print(response)
             self.assert400(response, message=msg)
 
     def test_update_non_existing_arrangement(self):
@@ -334,18 +333,13 @@ class TestAPI(TestCase):
         self.test_insert_travel_guide()
         self.test_insert_travel_admin()
 
-        # send GET request which is not allowed
-        response = self.client.get('/api/v1.0/users/2')
-        msg = "Request that you send does not have any data. Please send json with new value of your data as a user."
-        self.assert405(response, msg)
-
         # send PUT request without any data
-        response = self.client.put('/api/v1.0/users/2')
+        response = self.client.put('/api/v1.0/my_data')
         msg = "Request that you send does not have any data. Please send json with new value of your data as a user."
         self.assert400(response, msg)
 
         # send correct PUT request
-        response = self.client.put('/api/v1.0/users/2', json=dict(
+        response = self.client.put('/api/v1.0/my_data', json=dict(
             username='updated_username', desired_account_type='ADMIN'
         ))
         self.assert200(response)

@@ -1,5 +1,5 @@
-from flask import render_template, request, flash, redirect, url_for, jsonify
-from flask_login import login_user, logout_user, login_required
+from flask import request, jsonify
+from flask_login import login_user, logout_user
 
 from . import auth
 from app.models import User

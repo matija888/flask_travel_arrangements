@@ -302,12 +302,12 @@ class TestApp(TestCase):
         # insert two travel guides Travel Guide 1 and Travel Guide 2
         # Assign Travel Gide 2 to the arrangement for period (2021-11-01 - 2021-11-10)
         self.test_insert_new_travel_arrangement_with_travel_guides()
-        available_guides = User.get_available_travel_guides_ids('2021-10-01', '2021-10-15')
+        available_guides = User.get_available_travel_guides('2021-10-01', '2021-10-15')
         self.assertEqual(len(available_guides), 2)  # check if both travel guides are free
         self.assertEqual(f'{available_guides[0].first_name} {available_guides[0].last_name}', 'Travel Guide 1')
         self.assertEqual(f'{available_guides[1].first_name} {available_guides[1].last_name}', 'Travel Guide 2')
 
-        available_guides = User.get_available_travel_guides_ids('2021-10-01', '2021-11-15')
+        available_guides = User.get_available_travel_guides('2021-10-01', '2021-11-15')
         self.assertEqual(len(available_guides), 1)  # only one travel guide needs to be free
         # that guide is Travel Guide 2
         self.assertEqual(f'{available_guides[0].first_name} {available_guides[0].last_name}', 'Travel Guide 2')
@@ -324,10 +324,10 @@ class TestApp(TestCase):
         db.session.add(arrangement)
         db.session.commit()
 
-        available_guides = User.get_available_travel_guides_ids('2021-11-08', '2021-12-15')
+        available_guides = User.get_available_travel_guides('2021-11-08', '2021-12-15')
         self.assertEqual(len(available_guides), 0)  # there should be no available guide
 
-        available_guides = User.get_available_travel_guides_ids('2022-01-08', '2022-01-30')
+        available_guides = User.get_available_travel_guides('2022-01-08', '2022-01-30')
         self.assertEqual(len(available_guides), 2)  # there should be no available guide
 
     @unittest.mock.patch('flask_login.utils._get_user')
