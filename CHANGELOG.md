@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 ### Fixed
 
+## [2.0.1] - 2021-10-14
+### Added
+### Fixed
+- Added additional tests in order to fix problematic app functionalities
+
 ## [2.0.0] - 2021-10-14
 ### Changed
 - Modify Full Stack app into REST API

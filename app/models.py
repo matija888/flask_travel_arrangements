@@ -210,10 +210,9 @@ class User(db.Model, UserMixin, DatabaseObject):
                 if attr == 'desired_account_type':
                     if json[attr] not in ['ADMIN', 'TOURIST', 'TRAVEL GUIDE']:
                         return False
-                    else:
-                        if current_user.account_type == 'TRAVEL GUIDE' and json[attr] == 'TOURIST':
-                            return None
-                        self.confirmed_desired_account_type = 'pending'
+                    if current_user.account_type == 'TRAVEL GUIDE' and json[attr] == 'TOURIST':
+                        return None
+                    self.confirmed_desired_account_type = 'pending'
                 setattr(self, attr, value)
         db.session.add(self)
         db.session.commit()

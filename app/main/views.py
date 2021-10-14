@@ -30,22 +30,23 @@ def get_all_users():
 @main.route('/api/v1.0/my_data', methods=['GET', 'PUT'])
 @authenticated_user
 def my_data():
-    print(request.json)
-    if request.json is None:
-        msg = 'Request that you send does not have any data. '
-        msg += 'Please send json with new value of your data as a user.'
-        return return_message_to_client(msg, 400)
     user = User.get_user_by_id(current_user.id)
+
     if request.method == 'GET':
         return jsonify(user)
+
     elif request.method == 'PUT':
+        if request.json is None:
+            msg = 'Request that you send does not have any data. '
+            msg += 'Please send json with new value of your data as a user.'
+            return return_message_to_client(msg, 400)
         # change user's data
         user = User.query.filter_by(id=current_user.id).first()
         updated_all_fields = user.update_data(**request.json)
         if updated_all_fields is False:
             msg = 'Please chose one of the following desired_account_type: ADMIN, TOURIST, TRAVEL GUIDE.'
             status_code = 400
-        if updated_all_fields is None:
+        elif updated_all_fields is None:
             msg = 'TRAVEL GUIDE cannot send request for changing their account type to TOURIST.'
             status_code = 400
         else:
@@ -70,7 +71,7 @@ def account_type_requests():
 def manage_account_type_permission_request(user_id, action):
 
     if action not in ['approved', 'rejected']:
-        msg = 'You need to use /<user/approved or <user_id>/rejected as arguments in order to resolve the request.'
+        msg = 'You need to use /<user_id>/approved or <user_id>/rejected as arguments in order to resolve the request.'
         status_code = 400
         return return_message_to_client(msg, status_code)
 
@@ -212,8 +213,8 @@ def update_arrangement(arrangement_id):
                     available_guides_ids = User.get_available_travel_guides_ids(
                         start_travel_date=arrangement.start_date, end_travel_date=arrangement.end_date
                     )
-                    if travel_guide_id not in available_guides_ids:
-                        guide = User.query.filter_by(id=travel_guide_id).first()
+                    guide = User.query.filter_by(id=travel_guide_id).first()
+                    if guide and travel_guide_id not in available_guides_ids:
                         msg = f'Travel guide {guide.first_name} {guide.last_name} is not available in this period.'
                         msg += 'Check available guides at /api/v1.0/available_guides route with GET method'
                         return return_message_to_client(msg, 400)

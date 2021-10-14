@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 from base64 import b64encode
 
+from flask import jsonify
 from flask_testing import TestCase
 from flask_login import LoginManager
 from sqlalchemy.exc import IntegrityError
@@ -222,7 +223,7 @@ class TestAPI(TestCase):
         )
         self.assertEqual(response.status_code, 201)
         tourist = User.query.filter_by(desired_account_type='ADMIN').first()
-        tourist.account_type = 'TRAVEL GUIDE'
+        tourist.account_type = 'ADMIN'
         db.session.add(tourist)
         db.session.commit()
 
@@ -230,6 +231,7 @@ class TestAPI(TestCase):
     def test_update_arrangement(self, current_user):
         mock_current_user = MagicMock()
         mock_current_user.id = 1
+        mock_current_user.account_type = 'ADMIN'
         current_user.return_value = mock_current_user
 
         self.test_insert_travel_admin()
@@ -247,7 +249,7 @@ class TestAPI(TestCase):
         updated_end_date = '15.01.2021'
         response = self.client.put('/api/v1.0/arrangements/4', json=dict(
             destination=updated_destination, description=updated_description,
-            start_date=updated_start_date, end_date=updated_end_date
+            start_date=updated_start_date, end_date=updated_end_date, travel_guide_id=2
         ))
         self.assertEqual(response.status_code, 200)
         arrangement = Arrangement.query.filter_by(id=4).first()
@@ -255,7 +257,7 @@ class TestAPI(TestCase):
         self.assertEqual(arrangement.description, updated_description)
         self.assertEqual(arrangement.start_date.strftime('%d.%m.%Y'), updated_start_date)
         self.assertEqual(arrangement.end_date.strftime('%d.%m.%Y'), updated_end_date)
-        self.assertEqual(arrangement.travel_guide_id, None)
+        self.assertEqual(arrangement.travel_guide_id, 2)
 
         # try to update arrangement with start date in the next 5 days
         response = self.client.put('/api/v1.0/arrangements/4', json=dict(
@@ -279,9 +281,67 @@ class TestAPI(TestCase):
         self.assert404(response, message=msg)
 
     @unittest.mock.patch('flask_login.utils._get_user')
+    def test_update_arrangement_with_unavailable_guide(self, current_user):
+        mock_current_user = MagicMock()
+        mock_current_user.id = 1
+        mock_current_user.account_type = 'ADMIN'
+        current_user.return_value = mock_current_user
+
+        # insert two arrangements which overlapped
+        self.test_insert_9_arrangements()
+
+        # assign guide to arrangement=1 (01.01.2022 - 15.01.2022)
+        response = self.client.put('/api/v1.0/arrangements/1', json=dict(
+            travel_guide_id=1
+        ))
+        self.assert200(response)
+
+        arrangement = Arrangement.query.filter_by(id=2).first()
+        arrangement.start_date = '10.01.2022'
+        arrangement.end_date = '25.01.2022'
+        db.session.add(arrangement)
+        db.session.commit()
+
+        # TRY to assign guide to arrangement=2 (01.01.2022 - 15.01.2022)
+        response = self.client.put('/api/v1.0/arrangements/2', json=dict(
+            travel_guide_id=1
+        ))
+        self.assert400(response)
+
+    @unittest.mock.patch('flask_login.utils._get_user')
+    def test_update_arrangement_by_travel_guide(self, current_user):
+        mock_current_user = MagicMock()
+        mock_current_user.id = 1
+        mock_current_user.account_type = 'TRAVEL GUIDE'
+        current_user.return_value = mock_current_user
+
+        # insert two arrangements which overlapped
+        self.test_insert_9_arrangements()
+        # assign guide to arrangement=1 (01.01.2022 - 15.01.2022)
+        response = self.client.put('/api/v1.0/arrangements/1', json=dict(
+            travel_guide_id=1
+        ))
+        msg = 'You do not have permission to edit this arrangement.'
+        msg += 'You can only edit arrangement where you are assigned to be a travel guide.'
+        self.assert400(response, message=msg)
+
+        arrangement = Arrangement.query.filter_by(id=1).first()
+        arrangement.travel_guide_id = 1
+        db.session.add(arrangement)
+        db.session.commit()
+        # try to edit description which by TRAVEL GUIDE
+        response = self.client.put('/api/v1.0/arrangements/1', json=dict(
+            start_date='description test'
+        ))
+        msg = 'You only have permission to edit description of this arrangement.'
+        self.assert400(response)
+        self.assertEqual(response.json, {'message': msg})
+
+    @unittest.mock.patch('flask_login.utils._get_user')
     def test_update_someone_else_arrangement(self, current_user):
         mock_current_user = MagicMock()
         mock_current_user.id = 1
+        mock_current_user.account_type = 'ADMIN'
         current_user.return_value = mock_current_user
 
         self.test_insert_9_arrangements()
@@ -307,7 +367,7 @@ class TestAPI(TestCase):
         # POST is NOT ALLOWED method
         response = self.client.post('/api/v1.0/cancel_arrangement/1')
         self.assert405(response)
-        self.assertEqual(response.json, {'message': 'PUT is only allowed method for canceling the arrangement'})
+        self.assertEqual(response.json, {'message': 'Method Not Allowed!'})
 
         # try to cancel non existing arrangement
         response = self.client.put('/api/v1.0/cancel_arrangement/1')
@@ -329,7 +389,29 @@ class TestAPI(TestCase):
         self.assert200(response)
         self.assertEqual(len(response.json), 2)
 
-    def test_update_user(self):
+    @unittest.mock.patch('flask_login.utils._get_user')
+    def test_get_my_data(self, current_user):
+        mock_current_user = MagicMock()
+        mock_current_user.id = 2
+        mock_current_user.account_type = 'TRAVEL GUIDE'
+        current_user.return_value = mock_current_user
+
+        self.test_insert_travel_guide()
+        self.test_insert_travel_admin()
+
+        # send GET request
+        response = self.client.get('/api/v1.0/my_data')
+        self.assert200(response)
+        user = User.get_user_by_id(2)
+        self.assertEqual(response.json, user)
+
+    @unittest.mock.patch('flask_login.utils._get_user')
+    def test_update_user(self, current_user):
+        mock_current_user = MagicMock()
+        mock_current_user.id = 2
+        mock_current_user.account_type = 'TRAVEL GUIDE'
+        current_user.return_value = mock_current_user
+
         self.test_insert_travel_guide()
         self.test_insert_travel_admin()
 
@@ -343,8 +425,173 @@ class TestAPI(TestCase):
             username='updated_username', desired_account_type='ADMIN'
         ))
         self.assert200(response)
+        msg = 'You have successfully changed your data.'
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json, {'message': msg})
         user = User.query.filter_by(id=2).first()
         self.assertEqual(user.username, 'updated_username')
+
+        # send a request with wrong desired_account_type
+        response = self.client.put('/api/v1.0/my_data', json=dict(desired_account_type='ADMINISTRATOR'))
+        msg = 'Please chose one of the following desired_account_type: ADMIN, TOURIST, TRAVEL GUIDE.'
+        self.assert400(response, msg)
+
+        # TRAVEL GUIDE send a request for changing account_type to TOURIST (which is not allowed)
+        # they can only be changed to ADMIN
+        response = self.client.put('/api/v1.0/my_data', json=dict(desired_account_type='TOURIST'))
+        msg = 'TRAVEL GUIDE cannot send request for changing their account type to TOURIST.'
+        self.assert400(response, msg)
+
+    @unittest.mock.patch('flask_login.utils._get_user')
+    def test_account_type_requests(self, current_user):
+        mock_current_user = MagicMock()
+        mock_current_user.id = 2
+        mock_current_user.account_type = 'ADMIN'
+        current_user.return_value = mock_current_user
+
+        self.test_insert_travel_guide()
+        self.test_insert_travel_admin()
+        response = self.client.get('/api/v1.0/account_type_requests')
+        pending_account_type_change_requests = []
+        self.assert200(response, {'message': jsonify(pending_account_type_change_requests)})
+
+        mock_current_user.id = 1
+        mock_current_user.account_type = 'TRAVEL GUIDE'
+        current_user.return_value = mock_current_user
+        self.client.put('/api/v1.0/my_data', json=dict(desired_account_type='ADMIN'))
+
+        # after changing desired account type to ADMIN we need to get one request
+        response = self.client.get('/api/v1.0/account_type_requests')
+        user = User.get_user_by_id(1)
+        self.assertEqual(user['id'], 1)
+        self.assertEqual(user['account_type'], 'TRAVEL GUIDE')
+        self.assertEqual(user['desired_account_type'], 'ADMIN')
+        self.assert200(response, {'message': jsonify(pending_account_type_change_requests)})
+
+    @unittest.mock.patch('flask_login.utils._get_user')
+    def test_resolve_account_type_requests(self, current_user):
+        self.test_account_type_requests()
+        mock_current_user = MagicMock()
+        mock_current_user.account_type = 'ADMIN'
+        current_user.return_value = mock_current_user
+
+        # 'approve' is not valid action. It must be 'approved'
+        response = self.client.put('/api/v1.0/account_type_requests/1/approve')
+        msg = 'You need to use /<user_id>/approved or <user_id>/rejected as arguments in order to resolve the request.'
+        self.assert400(response, msg)
+
+        response = self.client.put('/api/v1.0/account_type_requests/1/approved')
+        msg = 'You have just approved request from Travel Guide '
+        msg += ' to give them ADMIN permissions.'
+        self.assert200(response, msg)
+
+        # try to reject request just after approve it. It is not allowed
+        response = self.client.put('/api/v1.0/account_type_requests/1/rejected')
+        msg = 'This user did not send request or their request has been already resolved.'
+        self.assert400(response, msg)
+
+        # revert back user.confirmed_desired_account_type to pending and then reject
+        user = User.query.filter_by(id=1).first()
+        user.confirmed_desired_account_type = 'pending'
+        user.account_type = 'TRAVEL GUIDE'
+        db.session.add(user)
+        db.session.commit()
+        response = self.client.put('/api/v1.0/account_type_requests/1/rejected')
+        msg = 'You have just rejected request from Travel Guide '
+        msg += f'to give them ADMIN permissions.'
+        self.assert200(response, msg)
+
+    def test_anonymous_arrangements_page(self):
+        response = self.client.get('/api/v1.0/arrangements')
+        arrangements = Arrangement.get_basic_arrangements_info()
+        self.assert200(response, {'message': arrangements})
+
+    @unittest.mock.patch('flask_login.utils._get_user')
+    def test_wrong_sort_args_for_sorting_arrangements(self, current_user):
+        mock_current_user = MagicMock()
+        mock_current_user.account_type = 'ADMIN'
+        mock_current_user.is_anonymous = False
+        current_user.return_value = mock_current_user
+
+        response = self.client.get('/api/v1.0/arrangements?columns_order=wrong_sort_argument')
+        msg = 'If you want to sort arrangements please use ?columns_order=column_name asc/desc'
+        self.assert400(response, msg)
+
+    def test_search_arrangements_by_date(self):
+        self.test_insert_9_arrangements()
+        response = self.client.get('/api/v1.0/search_arrangements?start_date=01.01.2022&end_date=01.05.2022')
+        self.assertEqual(len(response.json), 5)
+
+    @unittest.mock.patch('flask_login.utils._get_user')
+    def test_insert_reservation(self, current_user):
+        mock_current_user = MagicMock()
+        mock_current_user.account_type = 'ADMIN'
+        current_user.return_value = mock_current_user
+
+        # first insert 9 arrangements as ADMIN
+        self.test_insert_9_arrangements()
+
+        # change account_type to TOURIST who is allowed to insert reservation
+        self.app.config['LOGIN_DISABLED'] = False  # we do this in order to test TOURIST route for creating reservation
+        mock_current_user.account_type = 'TOURIST'
+        mock_current_user.id = 1
+        current_user.return_value = mock_current_user
+        response = self.client.post('/api/v1.0/reservations', json=dict(
+            arrangement_id=1, number_of_persons=1
+        ))
+        self.assertEqual(response.status_code, 201)
+        msg = 'You have successfully created reservation id 1'
+        self.assertEqual(response.json['message'], msg)
+
+        # change arrangement which is too late for reservation
+        arrangement = Arrangement.query.filter_by(id=5).first()
+        arrangement.start_date = '18.10.2021'
+        arrangement.end_date = '28.10.2021'
+        db.session.add(arrangement)
+        db.session.commit()
+        response = self.client.post('/api/v1.0/reservations', json=dict(
+            arrangement_id=5, number_of_persons=1
+        ))
+        self.assert400(response)
+        msg = "It is too late to create reservation for this arrangement since it starts on 18.10.2021"
+        self.assertEqual(response.json['message'], msg)
+
+        # send reservation for more persons than it is defined in arrangement
+        arrangement = Arrangement.query.filter_by(id=5).first()
+        arrangement.start_date = '30.11.2021'
+        arrangement.end_date = '15.12.2021'
+        db.session.add(arrangement)
+        db.session.commit()
+        response = self.client.post('/api/v1.0/reservations', json=dict(
+            arrangement_id=5, number_of_persons=5
+        ))
+        self.assert400(response)
+        msg = 'You cannot book reservation with number of persons greater than '
+        msg += 'remaining 2 unbooked reservation(places).'
+        self.assertEqual(response.json['message'], msg)
+
+        # send reservation to the same arrangement_id=5 with number of persons more than available(1 place)
+        self.test_register_route()
+        mock_current_user.id = 2
+        current_user.return_value = mock_current_user
+        response = self.client.post('/api/v1.0/reservations', json=dict(
+            arrangement_id=1, number_of_persons=2
+        ))
+        msg = 'You cannot reserve more than currently available places for this arrangement.'
+        self.assert400(response)
+        self.assertEqual(response.json['message'], msg)
+
+    def test_cancel_arrangement(self):
+        response = self.client.put('/api/v1.0/cancel_arrangement/1')
+        self.assert404(response)
+
+        self.test_insert_9_arrangements()
+        response = self.client.put('/api/v1.0/cancel_arrangement/1')
+        self.assert200(response)
+        msg = 'You have successfully canceled arrangement id 1'
+        self.assertEqual(response.json['message'], msg)
+
+        # put reservation for arrangement=1 which starts in January 2022
 
 
 if __name__ == '__main__':

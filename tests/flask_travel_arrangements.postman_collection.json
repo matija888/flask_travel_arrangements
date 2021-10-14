@@ -1,0 +1,1486 @@
+{
+	"info": {
+		"_postman_id": "c50ae6fb-88a8-4bf8-9fcd-b03ddc09a177",
+		"name": "flask_travel_arrangements",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Positive Tests",
+			"item": [
+				{
+					"name": "register user",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"first_name\": \"Marko\",\r\n    \"last_name\": \"Markovic\",\r\n    \"username\": \"marko\",\r\n    \"password\": \"marko\",\r\n    \"confirm_password\": \"marko\",\r\n    \"email\": \"marko@markovic.com\",\r\n    \"desired_account_type\": \"TOURIST\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/auth/api/v1.0/register",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"auth",
+								"api",
+								"v1.0",
+								"register"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "login",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "admin",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "admin",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/auth/api/v1.0/login",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"auth",
+								"api",
+								"v1.0",
+								"login"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "logout",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/auth/api/v1.0/logout",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"auth",
+								"api",
+								"v1.0",
+								"logout"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get my data",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"destination\": \"Serbia\",\r\n    \"description\": \"Stara planina - zimovanje\",\r\n    \"start_date\": \"01.12.2021\",\r\n    \"end_date\": \"10.12.2021\",\r\n    \"number_of_persons\": 2,\r\n    \"price\": 100.88\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/my_data",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"my_data"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "edit my data",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"desired_account_type\": \"TOURIST\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/my_data",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"my_data"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "users",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/users",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"users"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "edit_user",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"first_name\": \"Marko\",\r\n    \"last_name\": \"Markovic\",\r\n    \"username\": \"marko\",\r\n    \"email\": \"lukic.matija88@gmail.com\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/users/2",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"users",
+								"2"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "account type requests",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/account_type_requests",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"account_type_requests"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "manage account type request",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/account_type_requests",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"account_type_requests"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "arrangements",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/arrangements",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"arrangements"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "arrangements sort",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/arrangements?columns_order=destination asc",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"arrangements"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								},
+								{
+									"key": "columns_order",
+									"value": "destination asc"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "arrangements search",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/search_arrangements?destination&start_date=01.12.2021&end_date=01.03.2022",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"search_arrangements"
+							],
+							"query": [
+								{
+									"key": "destination",
+									"value": null
+								},
+								{
+									"key": "start_date",
+									"value": "01.12.2021"
+								},
+								{
+									"key": "end_date",
+									"value": "01.03.2022"
+								},
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "available travel guides",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/available_guides?start_date=01.10.2021&end_date=01.12.2021",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"available_guides"
+							],
+							"query": [
+								{
+									"key": "start_date",
+									"value": "01.10.2021"
+								},
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								},
+								{
+									"key": "end_date",
+									"value": "01.12.2021"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "arrangements create",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"destination\": \"Spain - Tenerife\",\r\n    \"description\": \"Spain summer\",\r\n    \"start_date\": \"01.06.2022\",\r\n    \"end_date\": \"12.06.2022\",\r\n    \"number_of_persons\": 4,\r\n    \"price\": 850.50\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/arrangements",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"arrangements"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "arrangements update",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"description\": \"Australia\",\r\n    \"destination\": \"Australia summer\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/arrangements/35",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"arrangements",
+								"35"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "reservations",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"destination\": \"Serbia\",\r\n    \"description\": \"Stara planina - zimovanje\",\r\n    \"start_date\": \"01.12.2021\",\r\n    \"end_date\": \"10.12.2021\",\r\n    \"number_of_persons\": 2,\r\n    \"price\": 100.88\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/reservations",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"reservations"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "reservations",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"arrangement_id\": 1,\r\n    \"number_of_persons\": 1\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/reservations",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"reservations"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "travel guide arrangements",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/travel_guide_arrangements",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"travel_guide_arrangements"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Negative Tests",
+			"item": [
+				{
+					"name": "register user",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"destination\": \"Serbia\",\r\n    \"description\": \"Stara planina - zimovanje\",\r\n    \"start_date\": \"01.12.2021\",\r\n    \"end_date\": \"10.12.2021\",\r\n    \"number_of_persons\": 2,\r\n    \"price\": 100.88\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/auth/api/v1.0/login",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"auth",
+								"api",
+								"v1.0",
+								"login"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "login",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"destination\": \"Serbia\",\r\n    \"description\": \"Stara planina - zimovanje\",\r\n    \"start_date\": \"01.12.2021\",\r\n    \"end_date\": \"10.12.2021\",\r\n    \"number_of_persons\": 2,\r\n    \"price\": 100.88\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/auth/api/v1.0/login",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"auth",
+								"api",
+								"v1.0",
+								"login"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "arrangements update non exisitng resorce",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"destination\": \"Serbia\",\r\n    \"description\": \"Stara planina - zimovanje\",\r\n    \"start_date\": \"01.12.2021\",\r\n    \"end_date\": \"10.12.2021\",\r\n    \"number_of_persons\": 2,\r\n    \"price\": 100.88\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/arrangements/1234567",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"arrangements",
+								"1234567"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "arrangements (start date in next 5 days)",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"destination\": \"Serbia\",\r\n    \"description\": \"Stara planina - zimovanje\",\r\n    \"start_date\": \"01.12.2021\",\r\n    \"end_date\": \"10.12.2021\",\r\n    \"number_of_persons\": 2,\r\n    \"price\": 100.88\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/api/v1.0/arrangements/1234567",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"v1.0",
+								"arrangements",
+								"1234567"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "login_non_existing_user",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "test",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "wrong_user",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"destination\": \"Serbia\",\r\n    \"description\": \"Stara planina - zimovanje\",\r\n    \"start_date\": \"01.12.2021\",\r\n    \"end_date\": \"10.12.2021\",\r\n    \"number_of_persons\": 2,\r\n    \"price\": 100.88\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/auth/api/v1.0/login",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"auth",
+								"api",
+								"v1.0",
+								"login"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "cancel_arrangement",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "matija",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"destination\": \"Serbia\",\r\n    \"description\": \"Stara planina - zimovanje\",\r\n    \"start_date\": \"01.12.2021\",\r\n    \"end_date\": \"10.12.2021\",\r\n    \"number_of_persons\": 2,\r\n    \"price\": 100.88\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/auth/api/v1.0/login",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"auth",
+								"api",
+								"v1.0",
+								"login"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "login_wrong_password",
+					"request": {
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "password",
+									"value": "wrong_password",
+									"type": "string"
+								},
+								{
+									"key": "username",
+									"value": "matija",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"destination\": \"Serbia\",\r\n    \"description\": \"Stara planina - zimovanje\",\r\n    \"start_date\": \"01.12.2021\",\r\n    \"end_date\": \"10.12.2021\",\r\n    \"number_of_persons\": 2,\r\n    \"price\": 100.88\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:5000/auth/api/v1.0/login",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "5000",
+							"path": [
+								"auth",
+								"api",
+								"v1.0",
+								"login"
+							],
+							"query": [
+								{
+									"key": "test",
+									"value": "123",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "basic"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
